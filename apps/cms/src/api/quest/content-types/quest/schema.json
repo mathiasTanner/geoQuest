@@ -1,0 +1,33 @@
+{
+  "kind": "collectionType",
+  "collectionName": "quests",
+  "info": {
+    "singularName": "quest",
+    "pluralName": "quests",
+    "displayName": "Quest"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "title": {
+      "type": "string",
+      "required": true
+    },
+    "slug": {
+      "type": "uid",
+      "targetField": "title",
+      "required": true
+    },
+    "quest_steps": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::quest-step.quest-step",
+      "mappedBy": "quest"
+    },
+    "description": {
+      "type": "text"
+    }
+  }
+}

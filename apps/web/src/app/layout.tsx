@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import Header from "@/components/site/Header";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -23,10 +24,29 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script
+            dangerouslySetInnerHTML={{
+              __html: `
+          (function () {
+            try {
+              var stored = localStorage.getItem('theme'); // 'light' | 'dark' | null
+              var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+              var useDark = stored ? stored === 'dark' : prefersDark;
+              var root = document.documentElement;
+              if (useDark) root.classList.add('dark');
+              else root.classList.remove('dark');
+            } catch (e) {}
+          })();
+          `,
+            }}
+        />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        <Header />
         {children}
       </body>
     </html>

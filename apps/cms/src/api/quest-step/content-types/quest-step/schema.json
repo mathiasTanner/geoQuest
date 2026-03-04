@@ -1,0 +1,59 @@
+{
+  "kind": "collectionType",
+  "collectionName": "quest_steps",
+  "info": {
+    "singularName": "quest-step",
+    "pluralName": "quest-steps",
+    "displayName": "QuestStep"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "quest": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::quest.quest",
+      "inversedBy": "quest_steps"
+    },
+    "order": {
+      "type": "integer",
+      "required": true
+    },
+    "title": {
+      "type": "string"
+    },
+    "latitude": { 
+      "type": "decimal", 
+      "required": true 
+    },
+    "longitude": { 
+      "type": "decimal", 
+      "required": true 
+    },
+    "radiusMeters": {
+      "type": "integer",
+      "required": true,
+      "min": 5,
+      "max": 50
+    },
+    "puzzleType": {
+      "type": "enumeration",
+      "required": true,
+      "enum": [
+        "text",
+        "sudoku",
+        "hangman"
+      ]
+    },
+    "puzzleDataPublic": {
+      "type": "json",
+      "required": true
+    },
+    "puzzleDataPrivate": {
+      "type": "json",
+      "required": true
+    }
+  }
+}

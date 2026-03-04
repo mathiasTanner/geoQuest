@@ -1,0 +1,18 @@
+{
+  "collectionName": "components_navigation_nav_items",
+  "info": {
+    "displayName": "nav.link",
+    "icon": "bulletList"
+  },
+  "options": {},
+  "attributes": {
+    "label": {
+      "type": "string",
+      "required": true
+    },
+    "href": {
+      "type": "string"
+    }
+  },
+  "config": {}
+}

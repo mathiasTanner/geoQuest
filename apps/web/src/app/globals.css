@@ -1,26 +1,160 @@
+/* apps/web/src/app/globals.css */
+
 @import "tailwindcss";
 
+/* -------------------------------------------------------
+   Project Quest — Tailwind v4 Design System (Light + Dark)
+   - Tokens live in @theme
+   - Dark mode via <html class="dark">
+-------------------------------------------------------- */
+
+/* LIGHT (default) */
+@theme {
+  --color-background: #F5F7F6;
+  --color-foreground: #0F172A;
+
+  --color-card: #FFFFFF;
+  --color-card-foreground: #0F172A;
+
+  --color-popover: #FFFFFF;
+  --color-popover-foreground: #0F172A;
+
+  --color-primary: #1F4E79;
+  --color-primary-foreground: #FFFFFF;
+  --color-primary-hover: #173C5E;
+
+  --color-secondary: #F1F5F9;
+  --color-secondary-foreground: #0F172A;
+
+  --color-muted: #E8EEF3;
+  --color-muted-foreground: #64748B;
+
+  --color-accent: #F59E0B;
+  --color-accent-foreground: #111827;
+  --color-accent-hover: #D97706;
+
+  --color-border: #E2E8F0;
+  --color-input: #E2E8F0;
+  --color-ring: #93C5FD;
+
+  --color-success: #16A34A;
+  --color-success-foreground: #052E16;
+
+  --color-warning: #F97316;
+  --color-warning-foreground: #431407;
+
+  --color-destructive: #EF4444;
+  --color-destructive-foreground: #450A0A;
+
+  --color-info: #0EA5E9;
+  --color-info-foreground: #082F49;
+
+  --color-clue: #8B5CF6;
+  --color-clue-foreground: #1E1B4B;
+
+  --color-locked: #64748B;
+  --color-locked-foreground: #0F172A;
+
+  --color-overlay: rgba(15, 23, 42, 0.55);
+
+  --radius-xs: 0.5rem;
+  --radius-sm: 0.75rem;
+  --radius-md: 1rem;
+  --radius-lg: 1.25rem;
+  --radius-xl: 1.5rem;
+
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
+  --shadow-md: 0 8px 24px rgba(15, 23, 42, 0.10);
+  --shadow-lg: 0 16px 40px rgba(15, 23, 42, 0.14);
+
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    "Liberation Mono", "Courier New", monospace;
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --text-3xl: 1.875rem;
+
+  --leading-tight: 1.15;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.65;
+
+  --ease-standard: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --duration-fast: 120ms;
+  --duration-normal: 180ms;
+  --duration-slow: 260ms;
+
+  /* Optional brand aliases (keeps your earlier class names working) */
+  --color-geoquest-primary: var(--color-primary);
+  --color-geoquest-primaryHover: var(--color-primary-hover);
+  --color-geoquest-accent: var(--color-accent);
+  --color-geoquest-background: var(--color-background);
+  --color-geoquest-surface: var(--color-card);
+  --color-geoquest-text: var(--color-foreground);
+  --color-geoquest-muted: var(--color-muted-foreground);
+  --color-geoquest-border: var(--color-border);
+}
+
+/* DARK overrides */
+.dark {
+  --color-background: #0B1220;
+  --color-foreground: #F1F5F9;
+
+  --color-card: #111827;
+  --color-card-foreground: #F1F5F9;
+
+  --color-popover: #111827;
+  --color-popover-foreground: #F1F5F9;
+
+  --color-primary: #3B82F6;
+  --color-primary-foreground: #071018;
+  --color-primary-hover: #60A5FA;
+
+  --color-secondary: #0F172A;
+  --color-secondary-foreground: #E2E8F0;
+
+  --color-muted: #111A2B;
+  --color-muted-foreground: #94A3B8;
+
+  --color-accent: #FBBF24;
+  --color-accent-foreground: #111827;
+  --color-accent-hover: #F59E0B;
+
+  --color-border: #1F2937;
+  --color-input: #1F2937;
+  --color-ring: #60A5FA;
+
+  --color-success: #22C55E;
+  --color-warning: #FB923C;
+  --color-destructive: #F87171;
+  --color-info: #38BDF8;
+  --color-clue: #A78BFA;
+
+  --color-locked: #94A3B8;
+  --color-locked-foreground: #0B1220;
+
+  --color-overlay: rgba(2, 6, 23, 0.60);
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 10px 28px rgba(0, 0, 0, 0.40);
+  --shadow-lg: 0 18px 52px rgba(0, 0, 0, 0.45);
+}
+
+/* Base defaults */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  color-scheme: light;
+  font-family: var(--font-sans);
+}
+.dark {
+  color-scheme: dark;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
+/* Apply site-wide base colors */
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  @apply bg-background text-foreground;
 }

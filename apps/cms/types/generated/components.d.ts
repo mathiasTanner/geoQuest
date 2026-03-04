@@ -1,5 +1,30 @@
 import type { Schema, Struct } from '@strapi/strapi';
 
+export interface NavigationNavItem extends Struct.ComponentSchema {
+  collectionName: 'components_navigation_nav_items';
+  info: {
+    displayName: 'nav.link';
+    icon: 'bulletList';
+  };
+  attributes: {
+    href: Schema.Attribute.String;
+    label: Schema.Attribute.String & Schema.Attribute.Required;
+  };
+}
+
+export interface NavigationNavMenuItem extends Struct.ComponentSchema {
+  collectionName: 'components_navigation_nav_menu_items';
+  info: {
+    displayName: 'nav.menuItem';
+    icon: 'bulletList';
+  };
+  attributes: {
+    children: Schema.Attribute.Component<'navigation.nav-item', true>;
+    href: Schema.Attribute.String;
+    label: Schema.Attribute.String & Schema.Attribute.Required;
+  };
+}
+
 export interface SharedMedia extends Struct.ComponentSchema {
   collectionName: 'components_shared_media';
   info: {
@@ -65,6 +90,8 @@ export interface SharedSlider extends Struct.ComponentSchema {
 declare module '@strapi/strapi' {
   export module Public {
     export interface ComponentSchemas {
+      'navigation.nav-item': NavigationNavItem;
+      'navigation.nav-menu-item': NavigationNavMenuItem;
       'shared.media': SharedMedia;
       'shared.quote': SharedQuote;
       'shared.rich-text': SharedRichText;
