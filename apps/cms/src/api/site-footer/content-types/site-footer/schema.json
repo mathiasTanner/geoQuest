@@ -1,0 +1,30 @@
+{
+  "kind": "singleType",
+  "collectionName": "site_footers",
+  "info": {
+    "singularName": "site-footer",
+    "pluralName": "site-footers",
+    "displayName": "Site Footer"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "brandName": {
+      "type": "string",
+      "required": true
+    },
+    "tagline": {
+      "type": "string"
+    },
+    "copyrightText": {
+      "type": "string"
+    },
+    "links": {
+      "type": "component",
+      "component": "shared.shared-link",
+      "repeatable": true
+    }
+  }
+}

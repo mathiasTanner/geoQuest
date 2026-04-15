@@ -1,0 +1,19 @@
+{
+  "collectionName": "components_shared_shared_links",
+  "info": {
+    "displayName": "shared.link",
+    "icon": "hashtag"
+  },
+  "options": {},
+  "attributes": {
+    "label": {
+      "type": "string",
+      "required": true
+    },
+    "href": {
+      "type": "string",
+      "required": true
+    }
+  },
+  "config": {}
+}

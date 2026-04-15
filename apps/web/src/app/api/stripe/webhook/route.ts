@@ -1,44 +1,129 @@
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
+import Stripe from "stripe";
 import { getStripe } from "@/lib/stripe";
+import { generateRedemptionCode } from "@/lib/purchases/generateRedemptionCode";
 
 export async function POST(req: Request) {
-  const headerList = await headers();
-  const sig = headerList.get("stripe-signature");
-  const secret = process.env.STRIPE_WEBHOOK_SECRET;
+  const stripe = getStripe();
+  const body = await req.text();
+  const signature = (await headers()).get("stripe-signature");
 
-  if (!sig || !secret) {
+  if (!signature) {
     return NextResponse.json(
-      { error: "Missing webhook signature or secret" },
+      { error: "Missing Stripe signature" },
       { status: 400 }
     );
   }
 
-  const body = await req.text();
+  if (!process.env.STRIPE_WEBHOOK_SECRET) {
+    return NextResponse.json(
+      { error: "Missing STRIPE_WEBHOOK_SECRET" },
+      { status: 500 }
+    );
+  }
 
-  let event;
+  let event: Stripe.Event;
 
   try {
-    const stripe = getStripe();
-    event = stripe.webhooks.constructEvent(body, sig, secret);
-  } catch (err: any) {
+    event = stripe.webhooks.constructEvent(
+      body,
+      signature,
+      process.env.STRIPE_WEBHOOK_SECRET
+    );
+  } catch (error) {
+    console.error("Stripe webhook signature verification failed:", error);
     return NextResponse.json(
-      { error: `Webhook signature verification failed: ${err.message}` },
+      { error: "Invalid webhook signature" },
       { status: 400 }
     );
   }
 
-  switch (event.type) {
-    case "checkout.session.completed":
-      console.log("✅ Checkout completed", event.data.object.id);
-      break;
+  if (event.type === "checkout.session.completed") {
+    const session = event.data.object as Stripe.Checkout.Session;
 
-    case "invoice.paid":
-      console.log("💰 Invoice paid", event.data.object.id);
-      break;
+    const questDocumentId = session.metadata?.questDocumentId;
+    const buyerEmail = session.customer_details?.email;
+    const stripeSessionId = session.id;
 
-    default:
-      console.log("ℹ️ Unhandled event", event.type);
+    if (!questDocumentId || !buyerEmail) {
+      console.error("Missing webhook data", {
+        questDocumentId,
+        buyerEmail,
+        stripeSessionId,
+      });
+
+      return NextResponse.json(
+        { error: "Missing required webhook data" },
+        { status: 400 }
+      );
+    }
+
+    const cmsUrl =
+      process.env.CMS_URL ??
+      process.env.NEXT_PUBLIC_CMS_URL ??
+      "http://localhost:1337";
+
+    const existingRes = await fetch(
+      `${cmsUrl}/api/quest-purchases?filters[stripeSessionId][$eq]=${stripeSessionId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.STRAPI_API_TOKEN}`,
+        },
+        cache: "no-store",
+      }
+    );
+
+    if (!existingRes.ok) {
+      console.error("Failed to check existing Quest Purchase");
+      return NextResponse.json(
+        { error: "Failed to check existing purchase" },
+        { status: 500 }
+      );
+    }
+
+    const existingJson = await existingRes.json();
+    const existingPurchase = existingJson?.data?.[0];
+
+    if (existingPurchase) {
+      return NextResponse.json({ received: true, duplicate: true });
+    }
+
+    const redemptionCode = generateRedemptionCode();
+
+    const createRes = await fetch(`${cmsUrl}/api/quest-purchases`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${process.env.STRAPI_API_TOKEN}`,
+      },
+      body: JSON.stringify({
+        data: {
+          quest: questDocumentId,
+          stripeSessionId,
+          buyerEmail,
+          redemptionCode,
+          purchaseStatus: "paid",
+        },
+      }),
+    });
+
+    if (!createRes.ok) {
+      const errorText = await createRes.text();
+      console.error("Failed to create Quest Purchase", errorText);
+
+      return NextResponse.json(
+        { error: "Failed to create Quest Purchase" },
+        { status: 500 }
+      );
+    }
+
+    console.log("Quest Purchase created", {
+      stripeSessionId,
+      buyerEmail,
+      redemptionCode,
+      questDocumentId,
+    });
   }
 
   return NextResponse.json({ received: true });

@@ -1,0 +1,41 @@
+{
+  "kind": "collectionType",
+  "collectionName": "quest_purchases",
+  "info": {
+    "singularName": "quest-purchase",
+    "pluralName": "quest-purchases",
+    "displayName": "Quest Purchase"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "quest": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::quest.quest",
+      "inversedBy": "quest_purchases"
+    },
+    "stripeSessionId": {
+      "type": "string"
+    },
+    "buyerEmail": {
+      "type": "email"
+    },
+    "redemptionCode": {
+      "type": "string"
+    },
+    "purchaseStatus": {
+      "type": "enumeration",
+      "enum": [
+        "pending",
+        "paid",
+        "redeemed"
+      ]
+    },
+    "redeemedAt": {
+      "type": "datetime"
+    }
+  }
+}
