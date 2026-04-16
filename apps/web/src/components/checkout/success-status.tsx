@@ -1,88 +1,114 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import Link from "next/link"
-import { getDictionary } from "@/lib/i18n"
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { getDictionary } from "@/lib/i18n";
 
 type Props = {
-  sessionId: string
-}
+  sessionId: string;
+};
 
 type SessionStatusResponse =
   | {
-      status: "processing"
+      status: "processing";
     }
   | {
-      status: "confirmed"
-      redemptionCode: string
-      questTitle?: string
+      status: "confirmed";
+      redemptionCode: string;
+      questTitle?: string;
     }
   | {
-      status: "missing_session"
+      status: "missing_session";
     }
   | {
-      status: "error"
-      message?: string
-    }
+      status: "error";
+      message?: string;
+    };
 
 export function SuccessStatus({ sessionId }: Props) {
-  const dict = getDictionary()
-  const [data, setData] = useState<SessionStatusResponse | null>(null)
-  const [hasTimedOut, setHasTimedOut] = useState(false)
+  const dict = getDictionary();
+  const [data, setData] = useState<SessionStatusResponse | null>(null);
+  const [hasTimedOut, setHasTimedOut] = useState(false);
 
   useEffect(() => {
-    let interval: ReturnType<typeof setInterval> | undefined
-    let attempts = 0
-    const maxAttempts = 5
+    let attempts = 0;
+    let isCancelled = false;
+    const maxAttempts = 20;
 
-    const fetchStatus = async () => {
-      try {
-        attempts += 1
-
-        const res = await fetch(
-          `/api/stripe/checkout/session-status?session_id=${encodeURIComponent(sessionId)}`
-        )
-
-        const text = await res.text()
+    const pollStatus = async () => {
+      while (!isCancelled && attempts < maxAttempts) {
+        attempts += 1;
 
         try {
-          const json = JSON.parse(text) as SessionStatusResponse
-          setData(json)
+          const res = await fetch(
+            `/api/stripe/checkout/session-status?session_id=${encodeURIComponent(sessionId)}`,
+            {
+              cache: "no-store",
+            }
+          );
 
-          if (json.status === "confirmed" || json.status === "error") {
-            if (interval) clearInterval(interval)
-            return
+          const text = await res.text();
+
+          try {
+            const json = JSON.parse(text) as SessionStatusResponse;
+
+            if (isCancelled) {
+              return;
+            }
+
+            setData(json);
+
+            if (json.status === "confirmed" || json.status === "error") {
+              return;
+            }
+          } catch {
+            console.error("Non-JSON response from session-status API:", text);
+
+            if (!isCancelled) {
+              setData({
+                status: "error",
+                message: dict.checkoutSuccess.invalidApiResponse,
+              });
+            }
+
+            return;
+          }
+        } catch (error) {
+          console.error("Failed to fetch session status:", error);
+
+          if (!isCancelled) {
+            setData({
+              status: "error",
+              message: dict.checkoutSuccess.fetchError,
+            });
           }
 
-          if (attempts >= maxAttempts) {
-            setHasTimedOut(true)
-            if (interval) clearInterval(interval)
-          }
-        } catch {
-          console.error("Non-JSON response from session-status API:", text)
-          setData({
-            status: "error",
-            message: dict.checkoutSuccess.invalidApiResponse,
-          })
-          if (interval) clearInterval(interval)
+          return;
         }
-      } catch (error) {
-        console.error("Failed to fetch session status:", error)
-        setData({
-          status: "error",
-          message: dict.checkoutSuccess.fetchError,
-        })
-        if (interval) clearInterval(interval)
-      }
-    }
 
-    fetchStatus()
-    interval = setInterval(fetchStatus, 2000)
+        if (attempts >= maxAttempts) {
+          if (!isCancelled) {
+            setHasTimedOut(true);
+          }
+          return;
+        }
+
+        await new Promise((resolve) => {
+          window.setTimeout(resolve, 2000);
+        });
+      }
+    };
+
+    void pollStatus();
 
     return () => {
-      if (interval) clearInterval(interval)
-    }
-  }, [sessionId, dict.checkoutSuccess.fetchError, dict.checkoutSuccess.invalidApiResponse])
+      isCancelled = true;
+    };
+  }, [
+    sessionId,
+    dict.checkoutSuccess.fetchError,
+    dict.checkoutSuccess.invalidApiResponse,
+  ]);
 
   if (!data || data.status === "processing") {
     return (
@@ -93,7 +119,7 @@ export function SuccessStatus({ sessionId }: Props) {
             : dict.checkoutSuccess.loading}
         </p>
       </div>
-    )
+    );
   }
 
   if (data.status === "confirmed") {
@@ -106,15 +132,16 @@ export function SuccessStatus({ sessionId }: Props) {
           <p className="mt-2 font-mono text-lg font-semibold">
             {data.redemptionCode}
           </p>
+          <p className="mt-3 text-sm text-muted-foreground">
+            {dict.checkoutSuccess.codeVisibleNotice}
+          </p>
         </div>
 
         <div>
           <p className="text-sm text-muted-foreground">
             {dict.checkoutSuccess.referenceLabel}
           </p>
-          <p className="mt-2 break-all text-sm font-medium">
-            {sessionId}
-          </p>
+          <p className="mt-2 break-all text-sm font-medium">{sessionId}</p>
           <p className="mt-2 text-sm text-muted-foreground">
             {dict.checkoutSuccess.supportHint}
           </p>
@@ -123,13 +150,13 @@ export function SuccessStatus({ sessionId }: Props) {
         <div>
           <Link
             href={`/redeem?code=${encodeURIComponent(data.redemptionCode)}`}
-            className="inline-flex items-center justify-center rounded-xl border px-4 py-2 text-sm font-medium transition hover:bg-muted"
+            className="inline-flex rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition hover:bg-[var(--color-primary-hover)]"
           >
             {dict.checkoutSuccess.redeemCta}
           </Link>
         </div>
       </div>
-    )
+    );
   }
 
   if (data.status === "error") {
@@ -137,8 +164,8 @@ export function SuccessStatus({ sessionId }: Props) {
       <p className="mt-6 text-sm text-red-600">
         {data.message ?? dict.checkoutSuccess.genericError}
       </p>
-    )
+    );
   }
 
-  return null
+  return null;
 }

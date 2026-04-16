@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getCmsUrl } from "@/lib/purchases/questPurchaseWorkflow";
 
 export async function POST(req: Request) {
   const body = await req.json();
@@ -11,8 +12,7 @@ export async function POST(req: Request) {
     );
   }
 
-  const cmsUrl =
-    process.env.CMS_URL ?? process.env.NEXT_PUBLIC_CMS_URL ?? "http://localhost:1337";
+  const cmsUrl = getCmsUrl();
 
   const res = await fetch(
     `${cmsUrl}/api/quest-purchases?filters[redemptionCode][$eq]=${code}&populate[quest]=true`,

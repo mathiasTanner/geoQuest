@@ -28,9 +28,10 @@ async function getPage(slug: string): Promise<Page | null> {
 export default async function Page({
   params,
 }: {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 }) {
-  const page = await getPage(params.slug);
+  const { slug } = await params;
+  const page = await getPage(slug);
 
   if (!page) {
     return <div>Page not found</div>;

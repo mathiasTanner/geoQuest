@@ -54,9 +54,7 @@ export default function PurchaseQuestButton({
       disabled={loading}
       className="inline-flex rounded-md bg-primary px-4 py-2 text-primary-foreground hover:bg-[var(--color-primary-hover)] disabled:cursor-not-allowed disabled:opacity-60"
     >
-      {loading
-        ? "Redirection..."
-        : `Acheter cette quête — CHF ${price}`}
+      {loading ? "Redirection..." : `Acheter cette quête — CHF ${price}`}
     </button>
   );
 }
