@@ -8,6 +8,8 @@ import {
 } from "@/lib/quests/questAccessSession";
 import { isSameOriginWrite } from "@/lib/security/sameOrigin";
 
+export const dynamic = "force-dynamic";
+
 type ForgetDevicePayload = {
   questAccessId?: string;
 };

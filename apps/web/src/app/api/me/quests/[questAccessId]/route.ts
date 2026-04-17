@@ -7,6 +7,8 @@ import {
   getOwnedQuestSummaryForSession,
 } from "@/lib/quests/questAccessSession";
 
+export const dynamic = "force-dynamic";
+
 type RouteContext = {
   params: Promise<{
     questAccessId: string;

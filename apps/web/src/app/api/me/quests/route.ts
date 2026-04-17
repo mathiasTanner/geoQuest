@@ -6,6 +6,8 @@ import {
   listOwnedQuestSummariesForSession,
 } from "@/lib/quests/questAccessSession";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   const cookieStore = await cookies();
   const session = await getActivePlayerSessionFromCookies(cookieStore, {
