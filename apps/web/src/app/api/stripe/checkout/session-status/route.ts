@@ -1,54 +1,61 @@
-import { NextRequest, NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server";
+import {
+  ensureQuestPurchaseForCheckout,
+  getCmsUrl,
+  getStrapiApiToken,
+} from "@/lib/purchases/questPurchaseWorkflow";
+import { getStripe } from "@/lib/stripe";
 
 export async function GET(req: NextRequest) {
-  const sessionId = req.nextUrl.searchParams.get("session_id")
-
-  console.log("session-status: sessionId =", sessionId)
+  const sessionId = req.nextUrl.searchParams.get("session_id");
 
   if (!sessionId) {
-    return NextResponse.json({ status: "missing_session" }, { status: 400 })
+    return NextResponse.json({ status: "missing_session" }, { status: 400 });
   }
 
   try {
-    if (!process.env.CMS_URL) {
-        throw new Error("CMS_URL is not defined")
+    const stripe = getStripe();
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+
+    if (session.status !== "complete" || session.payment_status !== "paid") {
+      return NextResponse.json({ status: "processing" });
     }
-    const url = `${process.env.CMS_URL}/api/quest-purchases?filters[stripeSessionId][$eq]=${sessionId}&populate=quest`
 
-    console.log("session-status: fetching from Strapi:", url)
+    const questDocumentId = session.metadata?.questDocumentId;
+    const buyerEmail =
+      session.customer_details?.email ?? session.customer_email;
 
-    const res = await fetch(url, {
-      headers: {
-        Authorization: `Bearer ${process.env.STRAPI_API_TOKEN}`,
-      },
-      cache: "no-store",
-    })
-
-    console.log("session-status: Strapi response status:", res.status)
-
-    const text = await res.text()
-
-    console.log("session-status: raw response:", text)
-
-    const data = JSON.parse(text)
-
-    const purchase = data?.data?.[0]
-
-    if (!purchase) {
-      return NextResponse.json({ status: "processing" })
+    if (!questDocumentId || !buyerEmail) {
+      return NextResponse.json(
+        {
+          status: "error",
+          message: "Impossible de recuperer les informations de paiement.",
+        },
+        { status: 500 }
+      );
     }
+
+    const ensuredPurchase = await ensureQuestPurchaseForCheckout({
+      buyerEmail,
+      cmsUrl: getCmsUrl(),
+      questDocumentId,
+      stripeSessionId: sessionId,
+      strapiApiToken: getStrapiApiToken(),
+    });
 
     return NextResponse.json({
       status: "confirmed",
-      redemptionCode: purchase.redemptionCode,
-      questTitle: purchase.quest?.title,
-    })
+      redemptionCode: ensuredPurchase.redemptionCode,
+    });
   } catch (error) {
-    console.error("session-status route error:", error)
+    console.error("session-status route error:", error);
 
-    return NextResponse.json({
-      status: "error",
-      message: "debug error",
-    })
+    return NextResponse.json(
+      {
+        status: "error",
+        message: "Impossible de finaliser votre code pour le moment.",
+      },
+      { status: 500 }
+    );
   }
 }

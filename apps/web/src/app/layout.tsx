@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Header from "@/components/site/Header";
-import "./globals.css";
 import Footer from "@/components/site/Footer";
+import StorageNotice from "@/components/site/StorageNotice";
 import { getSiteSettings } from "@/lib/strapi/siteSettings";
+import "./globals.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -37,7 +38,7 @@ export default async function RootLayout({
     : null;
 
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="fr" suppressHydrationWarning>
       <head>
         {faviconUrl && <link rel="icon" href={faviconUrl} />}
         <script
@@ -61,6 +62,7 @@ export default async function RootLayout({
         <Header />
         <main className="flex-1">{children}</main>
         <Footer />
+        <StorageNotice />
       </body>
     </html>
   );

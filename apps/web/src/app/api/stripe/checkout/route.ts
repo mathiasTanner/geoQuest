@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getCmsUrl } from "@/lib/purchases/questPurchaseWorkflow";
 import { getStripe } from "@/lib/stripe";
 
 export async function POST(req: Request) {
@@ -12,8 +13,7 @@ export async function POST(req: Request) {
     );
   }
 
-  const cmsUrl =
-    process.env.CMS_URL ?? process.env.NEXT_PUBLIC_CMS_URL ?? "http://localhost:1337";
+  const cmsUrl = getCmsUrl();
 
   const res = await fetch(
     `${cmsUrl}/api/quests?filters[slug][$eq]=${questSlug}&populate=*`,

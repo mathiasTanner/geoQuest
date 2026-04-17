@@ -1,0 +1,42 @@
+{
+  "kind": "collectionType",
+  "collectionName": "player_sessions",
+  "info": {
+    "singularName": "player-session",
+    "pluralName": "player-sessions",
+    "displayName": "Player Session"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "tokenHash": {
+      "type": "string",
+      "required": true,
+      "unique": true
+    },
+    "status": {
+      "type": "enumeration",
+      "enum": [
+        "active",
+        "revoked",
+        "expired"
+      ],
+      "default": "active",
+      "required": true
+    },
+    "lastSeenAt": {
+      "type": "datetime"
+    },
+    "expiresAt": {
+      "type": "datetime"
+    },
+    "quest_accesses": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::quest-access.quest-access",
+      "mappedBy": "currentPlayerSession"
+    }
+  }
+}

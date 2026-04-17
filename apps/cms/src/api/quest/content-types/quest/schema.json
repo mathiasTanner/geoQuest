@@ -67,6 +67,12 @@
       "relation": "oneToMany",
       "target": "api::quest-purchase.quest-purchase",
       "mappedBy": "quest"
+    },
+    "quest_accesses": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::quest-access.quest-access",
+      "mappedBy": "quest"
     }
   }
 }

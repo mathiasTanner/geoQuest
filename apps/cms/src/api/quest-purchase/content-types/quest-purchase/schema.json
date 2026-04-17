@@ -18,13 +18,15 @@
       "inversedBy": "quest_purchases"
     },
     "stripeSessionId": {
-      "type": "string"
+      "type": "string",
+      "unique": true
     },
     "buyerEmail": {
       "type": "email"
     },
     "redemptionCode": {
-      "type": "string"
+      "type": "string",
+      "unique": true
     },
     "purchaseStatus": {
       "type": "enumeration",
@@ -34,8 +36,29 @@
         "redeemed"
       ]
     },
+    "emailStatus": {
+      "type": "enumeration",
+      "enum": [
+        "pending",
+        "sent",
+        "failed"
+      ],
+      "default": "pending"
+    },
+    "emailSentAt": {
+      "type": "datetime"
+    },
+    "emailFailureReason": {
+      "type": "text"
+    },
     "redeemedAt": {
       "type": "datetime"
+    },
+    "questAccess": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::quest-access.quest-access",
+      "mappedBy": "questPurchase"
     }
   }
 }

@@ -1,0 +1,24 @@
+{
+  "kind": "collectionType",
+  "collectionName": "quest_progress_locks",
+  "info": {
+    "singularName": "quest-progress-lock",
+    "pluralName": "quest-progress-locks",
+    "displayName": "Quest Progress Lock"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "progressKey": {
+      "type": "string",
+      "required": true,
+      "unique": true
+    },
+    "expiresAt": {
+      "type": "datetime",
+      "required": true
+    }
+  }
+}
