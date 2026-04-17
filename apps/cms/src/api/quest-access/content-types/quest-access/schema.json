@@ -1,0 +1,63 @@
+{
+  "kind": "collectionType",
+  "collectionName": "quest_accesses",
+  "info": {
+    "singularName": "quest-access",
+    "pluralName": "quest-accesses",
+    "displayName": "Quest Access"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "questPurchase": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::quest-purchase.quest-purchase",
+      "inversedBy": "questAccess"
+    },
+    "quest": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::quest.quest",
+      "inversedBy": "quest_accesses"
+    },
+    "currentPlayerSession": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::player-session.player-session",
+      "inversedBy": "quest_accesses"
+    },
+    "status": {
+      "type": "enumeration",
+      "enum": [
+        "active",
+        "revoked"
+      ],
+      "default": "active",
+      "required": true
+    },
+    "firstRedeemedAt": {
+      "type": "datetime",
+      "required": true
+    },
+    "lastOpenedAt": {
+      "type": "datetime"
+    },
+    "lastRecoveredAt": {
+      "type": "datetime"
+    },
+    "recoveryCount": {
+      "type": "integer",
+      "default": 0,
+      "required": true
+    },
+    "progress": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::quest-progress.quest-progress",
+      "mappedBy": "questAccess"
+    }
+  }
+}

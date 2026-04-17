@@ -24,13 +24,13 @@
     "title": {
       "type": "string"
     },
-    "latitude": { 
-      "type": "decimal", 
-      "required": true 
+    "latitude": {
+      "type": "decimal",
+      "required": true
     },
-    "longitude": { 
-      "type": "decimal", 
-      "required": true 
+    "longitude": {
+      "type": "decimal",
+      "required": true
     },
     "radiusMeters": {
       "type": "integer",

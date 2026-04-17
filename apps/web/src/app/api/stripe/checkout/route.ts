@@ -1,33 +1,73 @@
 import { NextResponse } from "next/server";
+import { getCmsUrl } from "@/lib/purchases/questPurchaseWorkflow";
 import { getStripe } from "@/lib/stripe";
 
-export async function POST() {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+export async function POST(req: Request) {
+  const body = await req.json();
+  const { questSlug } = body;
 
-  if (!process.env.STRIPE_SECRET_KEY) {
+  if (!questSlug) {
     return NextResponse.json(
-      { error: "Missing STRIPE_SECRET_KEY" },
+      { error: "Missing questSlug" },
+      { status: 400 }
+    );
+  }
+
+  const cmsUrl = getCmsUrl();
+
+  const res = await fetch(
+    `${cmsUrl}/api/quests?filters[slug][$eq]=${questSlug}&populate=*`,
+    {
+      headers: {
+        Authorization: `Bearer ${process.env.STRAPI_API_TOKEN}`,
+      },
+      cache: "no-store",
+    }
+  );
+
+  if (!res.ok) {
+    return NextResponse.json(
+      { error: "Failed to fetch quest" },
       { status: 500 }
     );
   }
 
-  // Skeleton: uses a placeholder price. You’ll swap this per project.
-  const priceId = process.env.STRIPE_PRICE_ID;
+  const json = await res.json();
+  const questEntry = json?.data?.[0];
+  const quest = questEntry?.attributes ?? questEntry;
 
-  if (!priceId) {
+  if (!quest) {
     return NextResponse.json(
-      { error: "Missing STRIPE_PRICE_ID (add it for your project)" },
-      { status: 500 }
+      { error: "Quest not found" },
+      { status: 404 }
+    );
+  }
+
+  if (!quest.stripePriceId) {
+    return NextResponse.json(
+      { error: "Quest is not purchasable yet" },
+      { status: 400 }
     );
   }
 
   const stripe = getStripe();
 
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+
   const session = await stripe.checkout.sessions.create({
-    mode: "subscription", // change to "payment" for one-off purchases
-    line_items: [{ price: priceId, quantity: 1 }],
-    success_url: `${appUrl}/?checkout=success`,
-    cancel_url: `${appUrl}/?checkout=cancel`,
+    mode: "payment",
+    line_items: [
+      {
+        price: quest.stripePriceId,
+        quantity: 1,
+      },
+    ],
+    metadata: {
+      questSlug,
+      questDocumentId: questEntry?.documentId ?? "",
+    },
+    success_url: `${appUrl}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${appUrl}/quests/${questSlug}`,
   });
 
   return NextResponse.json({ url: session.url });

@@ -1,0 +1,64 @@
+{
+  "kind": "collectionType",
+  "collectionName": "quest_purchases",
+  "info": {
+    "singularName": "quest-purchase",
+    "pluralName": "quest-purchases",
+    "displayName": "Quest Purchase"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "quest": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::quest.quest",
+      "inversedBy": "quest_purchases"
+    },
+    "stripeSessionId": {
+      "type": "string",
+      "unique": true
+    },
+    "buyerEmail": {
+      "type": "email"
+    },
+    "redemptionCode": {
+      "type": "string",
+      "unique": true
+    },
+    "purchaseStatus": {
+      "type": "enumeration",
+      "enum": [
+        "pending",
+        "paid",
+        "redeemed"
+      ]
+    },
+    "emailStatus": {
+      "type": "enumeration",
+      "enum": [
+        "pending",
+        "sent",
+        "failed"
+      ],
+      "default": "pending"
+    },
+    "emailSentAt": {
+      "type": "datetime"
+    },
+    "emailFailureReason": {
+      "type": "text"
+    },
+    "redeemedAt": {
+      "type": "datetime"
+    },
+    "questAccess": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::quest-access.quest-access",
+      "mappedBy": "questPurchase"
+    }
+  }
+}

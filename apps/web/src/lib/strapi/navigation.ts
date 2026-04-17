@@ -5,6 +5,7 @@ export type NavItem = { label: string; href?: string; children?: NavLink[] };
 
 type StrapiNavigationResponse = {
   data?: any; // we normalize because Strapi v5/v4 shapes differ by config
+  items?: unknown;
 };
 
 function normalizeNavigation(json: StrapiNavigationResponse): NavItem[] {
@@ -37,7 +38,7 @@ function normalizeNavigation(json: StrapiNavigationResponse): NavItem[] {
 
 export async function getNavigation(): Promise<NavItem[]> {
   // populate children components
-  const json = await strapiFetch(
+  const json = await strapiFetch<StrapiNavigationResponse>(
     "/navigation?populate[items][populate][children]=*",
     { revalidate: 60 }
   );

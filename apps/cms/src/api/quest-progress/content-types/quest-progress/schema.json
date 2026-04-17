@@ -1,0 +1,58 @@
+{
+  "kind": "collectionType",
+  "collectionName": "quest_progresses",
+  "info": {
+    "singularName": "quest-progress",
+    "pluralName": "quest-progresses",
+    "displayName": "Quest Progress"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "questAccess": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::quest-access.quest-access",
+      "inversedBy": "progress"
+    },
+    "currentStepDocumentId": {
+      "type": "string",
+      "required": true
+    },
+    "currentStepOrder": {
+      "type": "integer",
+      "required": true
+    },
+    "completedStepOrders": {
+      "type": "json",
+      "required": true
+    },
+    "status": {
+      "type": "enumeration",
+      "enum": [
+        "active",
+        "completed"
+      ],
+      "default": "active",
+      "required": true
+    },
+    "currentStepStartedAt": {
+      "type": "datetime"
+    },
+    "lastActiveAt": {
+      "type": "datetime",
+      "required": true
+    },
+    "lastCheckpointAt": {
+      "type": "datetime",
+      "required": true
+    },
+    "version": {
+      "type": "integer",
+      "required": true,
+      "default": 1
+    }
+  }
+}

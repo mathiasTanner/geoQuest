@@ -1,44 +1,115 @@
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
+import Stripe from "stripe";
+import {
+  ensureQuestPurchaseForCheckout,
+  getCmsUrl,
+  getStrapiApiToken,
+  maskEmail,
+} from "@/lib/purchases/questPurchaseWorkflow";
 import { getStripe } from "@/lib/stripe";
 
 export async function POST(req: Request) {
-  const headerList = await headers();
-  const sig = headerList.get("stripe-signature");
-  const secret = process.env.STRIPE_WEBHOOK_SECRET;
+  const stripe = getStripe();
+  const body = await req.text();
+  const signature = (await headers()).get("stripe-signature");
 
-  if (!sig || !secret) {
+  if (!signature) {
     return NextResponse.json(
-      { error: "Missing webhook signature or secret" },
+      { error: "Missing Stripe signature" },
       { status: 400 }
     );
   }
 
-  const body = await req.text();
+  if (!process.env.STRIPE_WEBHOOK_SECRET) {
+    return NextResponse.json(
+      { error: "Missing STRIPE_WEBHOOK_SECRET" },
+      { status: 500 }
+    );
+  }
 
-  let event;
+  let event: Stripe.Event;
 
   try {
-    const stripe = getStripe();
-    event = stripe.webhooks.constructEvent(body, sig, secret);
-  } catch (err: any) {
+    event = stripe.webhooks.constructEvent(
+      body,
+      signature,
+      process.env.STRIPE_WEBHOOK_SECRET
+    );
+  } catch (error) {
+    console.error("Stripe webhook signature verification failed:", error);
     return NextResponse.json(
-      { error: `Webhook signature verification failed: ${err.message}` },
+      { error: "Invalid webhook signature" },
       { status: 400 }
     );
   }
 
-  switch (event.type) {
-    case "checkout.session.completed":
-      console.log("✅ Checkout completed", event.data.object.id);
-      break;
+  if (event.type === "checkout.session.completed") {
+    const session = event.data.object as Stripe.Checkout.Session;
 
-    case "invoice.paid":
-      console.log("💰 Invoice paid", event.data.object.id);
-      break;
+    const questDocumentId = session.metadata?.questDocumentId;
+    const buyerEmail = session.customer_details?.email;
+    const stripeSessionId = session.id;
 
-    default:
-      console.log("ℹ️ Unhandled event", event.type);
+    if (!questDocumentId || !buyerEmail) {
+      console.error("Missing webhook data", {
+        questDocumentId,
+        buyerEmail: buyerEmail ? maskEmail(buyerEmail) : undefined,
+        stripeSessionId,
+      });
+
+      return NextResponse.json(
+        { error: "Missing required webhook data" },
+        { status: 400 }
+      );
+    }
+
+    const cmsUrl = getCmsUrl();
+    let strapiApiToken: string;
+
+    try {
+      strapiApiToken = getStrapiApiToken();
+    } catch {
+      console.error("Missing STRAPI_API_TOKEN");
+      return NextResponse.json(
+        { error: "Missing STRAPI_API_TOKEN" },
+        { status: 500 }
+      );
+    }
+
+    try {
+      const ensuredPurchase = await ensureQuestPurchaseForCheckout({
+        buyerEmail,
+        cmsUrl,
+        questDocumentId,
+        stripeSessionId,
+        strapiApiToken,
+      });
+
+      console.log("Quest Purchase confirmed", {
+        stripeSessionId,
+        questDocumentId,
+        buyerEmail: maskEmail(buyerEmail),
+        duplicate: ensuredPurchase.duplicate,
+      });
+
+      return NextResponse.json({
+        received: true,
+        duplicate: ensuredPurchase.duplicate,
+      });
+    } catch (error) {
+      console.error("Failed to process Quest Purchase", {
+        stripeSessionId,
+        questDocumentId,
+        buyerEmail: maskEmail(buyerEmail),
+        error,
+      });
+
+      return NextResponse.json(
+        { error: "Failed to create Quest Purchase" },
+        { status: 500 }
+      );
+    }
   }
 
   return NextResponse.json({ received: true });

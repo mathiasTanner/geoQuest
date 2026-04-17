@@ -28,6 +28,51 @@
     },
     "description": {
       "type": "text"
+    },
+    "coverImage": {
+      "type": "media",
+      "multiple": false,
+      "allowedTypes": [
+        "images",
+        "files",
+        "videos",
+        "audios"
+      ]
+    },
+    "duration": {
+      "type": "string"
+    },
+    "difficulty": {
+      "type": "enumeration",
+      "enum": [
+        "easy",
+        "medium",
+        "hard"
+      ]
+    },
+    "city": {
+      "type": "string"
+    },
+    "price": {
+      "type": "decimal"
+    },
+    "isFeatured": {
+      "type": "boolean"
+    },
+    "stripePriceId": {
+      "type": "string"
+    },
+    "quest_purchases": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::quest-purchase.quest-purchase",
+      "mappedBy": "quest"
+    },
+    "quest_accesses": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::quest-access.quest-access",
+      "mappedBy": "quest"
     }
   }
 }

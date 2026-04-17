@@ -595,6 +595,37 @@ export interface ApiGlobalGlobal extends Struct.SingleTypeSchema {
   };
 }
 
+export interface ApiHomeHome extends Struct.SingleTypeSchema {
+  collectionName: 'homes';
+  info: {
+    displayName: 'Home';
+    pluralName: 'homes';
+    singularName: 'home';
+  };
+  options: {
+    draftAndPublish: true;
+  };
+  attributes: {
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    featuredQuestsSubtitle: Schema.Attribute.String;
+    featuredQuestsTitle: Schema.Attribute.String;
+    heroCtaHref: Schema.Attribute.String;
+    heroCtaLabel: Schema.Attribute.String;
+    heroImage: Schema.Attribute.Media<'images' | 'files' | 'videos' | 'audios'>;
+    heroSubtitle: Schema.Attribute.String;
+    heroTitle: Schema.Attribute.String & Schema.Attribute.Required;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<'oneToMany', 'api::home.home'> &
+      Schema.Attribute.Private;
+    publishedAt: Schema.Attribute.DateTime;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+  };
+}
+
 export interface ApiNavigationNavigation extends Struct.SingleTypeSchema {
   collectionName: 'navigations';
   info: {
@@ -617,6 +648,246 @@ export interface ApiNavigationNavigation extends Struct.SingleTypeSchema {
     > &
       Schema.Attribute.Private;
     publishedAt: Schema.Attribute.DateTime;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+  };
+}
+
+export interface ApiPlayerSessionPlayerSession
+  extends Struct.CollectionTypeSchema {
+  collectionName: 'player_sessions';
+  info: {
+    displayName: 'Player Session';
+    pluralName: 'player-sessions';
+    singularName: 'player-session';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    expiresAt: Schema.Attribute.DateTime;
+    lastSeenAt: Schema.Attribute.DateTime;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::player-session.player-session'
+    > &
+      Schema.Attribute.Private;
+    publishedAt: Schema.Attribute.DateTime;
+    quest_accesses: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::quest-access.quest-access'
+    >;
+    status: Schema.Attribute.Enumeration<['active', 'revoked', 'expired']> &
+      Schema.Attribute.Required &
+      Schema.Attribute.DefaultTo<'active'>;
+    tokenHash: Schema.Attribute.String &
+      Schema.Attribute.Required &
+      Schema.Attribute.Unique;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+  };
+}
+
+export interface ApiPurchaseEmailTemplatePurchaseEmailTemplate
+  extends Struct.SingleTypeSchema {
+  collectionName: 'purchase_email_templates';
+  info: {
+    displayName: 'Purchase Email Template';
+    pluralName: 'purchase-email-templates';
+    singularName: 'purchase-email-template';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    htmlTemplate: Schema.Attribute.Text & Schema.Attribute.Required;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::purchase-email-template.purchase-email-template'
+    > &
+      Schema.Attribute.Private;
+    publishedAt: Schema.Attribute.DateTime;
+    subjectTemplate: Schema.Attribute.String & Schema.Attribute.Required;
+    textTemplate: Schema.Attribute.Text & Schema.Attribute.Required;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+  };
+}
+
+export interface ApiQuestAccessQuestAccess extends Struct.CollectionTypeSchema {
+  collectionName: 'quest_accesses';
+  info: {
+    displayName: 'Quest Access';
+    pluralName: 'quest-accesses';
+    singularName: 'quest-access';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    currentPlayerSession: Schema.Attribute.Relation<
+      'manyToOne',
+      'api::player-session.player-session'
+    >;
+    firstRedeemedAt: Schema.Attribute.DateTime & Schema.Attribute.Required;
+    lastOpenedAt: Schema.Attribute.DateTime;
+    lastRecoveredAt: Schema.Attribute.DateTime;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::quest-access.quest-access'
+    > &
+      Schema.Attribute.Private;
+    progress: Schema.Attribute.Relation<
+      'oneToOne',
+      'api::quest-progress.quest-progress'
+    >;
+    publishedAt: Schema.Attribute.DateTime;
+    quest: Schema.Attribute.Relation<'manyToOne', 'api::quest.quest'>;
+    questPurchase: Schema.Attribute.Relation<
+      'oneToOne',
+      'api::quest-purchase.quest-purchase'
+    >;
+    recoveryCount: Schema.Attribute.Integer &
+      Schema.Attribute.Required &
+      Schema.Attribute.DefaultTo<0>;
+    status: Schema.Attribute.Enumeration<['active', 'revoked']> &
+      Schema.Attribute.Required &
+      Schema.Attribute.DefaultTo<'active'>;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+  };
+}
+
+export interface ApiQuestProgressLockQuestProgressLock
+  extends Struct.CollectionTypeSchema {
+  collectionName: 'quest_progress_locks';
+  info: {
+    displayName: 'Quest Progress Lock';
+    pluralName: 'quest-progress-locks';
+    singularName: 'quest-progress-lock';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    expiresAt: Schema.Attribute.DateTime & Schema.Attribute.Required;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::quest-progress-lock.quest-progress-lock'
+    > &
+      Schema.Attribute.Private;
+    progressKey: Schema.Attribute.String &
+      Schema.Attribute.Required &
+      Schema.Attribute.Unique;
+    publishedAt: Schema.Attribute.DateTime;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+  };
+}
+
+export interface ApiQuestProgressQuestProgress
+  extends Struct.CollectionTypeSchema {
+  collectionName: 'quest_progresses';
+  info: {
+    displayName: 'Quest Progress';
+    pluralName: 'quest-progresses';
+    singularName: 'quest-progress';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    completedStepOrders: Schema.Attribute.JSON & Schema.Attribute.Required;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    currentStepDocumentId: Schema.Attribute.String & Schema.Attribute.Required;
+    currentStepOrder: Schema.Attribute.Integer & Schema.Attribute.Required;
+    currentStepStartedAt: Schema.Attribute.DateTime;
+    lastActiveAt: Schema.Attribute.DateTime & Schema.Attribute.Required;
+    lastCheckpointAt: Schema.Attribute.DateTime & Schema.Attribute.Required;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::quest-progress.quest-progress'
+    > &
+      Schema.Attribute.Private;
+    publishedAt: Schema.Attribute.DateTime;
+    questAccess: Schema.Attribute.Relation<
+      'oneToOne',
+      'api::quest-access.quest-access'
+    >;
+    status: Schema.Attribute.Enumeration<['active', 'completed']> &
+      Schema.Attribute.Required &
+      Schema.Attribute.DefaultTo<'active'>;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    version: Schema.Attribute.Integer &
+      Schema.Attribute.Required &
+      Schema.Attribute.DefaultTo<1>;
+  };
+}
+
+export interface ApiQuestPurchaseQuestPurchase
+  extends Struct.CollectionTypeSchema {
+  collectionName: 'quest_purchases';
+  info: {
+    displayName: 'Quest Purchase';
+    pluralName: 'quest-purchases';
+    singularName: 'quest-purchase';
+  };
+  options: {
+    draftAndPublish: true;
+  };
+  attributes: {
+    buyerEmail: Schema.Attribute.Email;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    emailFailureReason: Schema.Attribute.Text;
+    emailSentAt: Schema.Attribute.DateTime;
+    emailStatus: Schema.Attribute.Enumeration<['pending', 'sent', 'failed']> &
+      Schema.Attribute.DefaultTo<'pending'>;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::quest-purchase.quest-purchase'
+    > &
+      Schema.Attribute.Private;
+    publishedAt: Schema.Attribute.DateTime;
+    purchaseStatus: Schema.Attribute.Enumeration<
+      ['pending', 'paid', 'redeemed']
+    >;
+    quest: Schema.Attribute.Relation<'manyToOne', 'api::quest.quest'>;
+    questAccess: Schema.Attribute.Relation<
+      'oneToOne',
+      'api::quest-access.quest-access'
+    >;
+    redeemedAt: Schema.Attribute.DateTime;
+    redemptionCode: Schema.Attribute.String & Schema.Attribute.Unique;
+    stripeSessionId: Schema.Attribute.String & Schema.Attribute.Unique;
     updatedAt: Schema.Attribute.DateTime;
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
@@ -679,20 +950,132 @@ export interface ApiQuestQuest extends Struct.CollectionTypeSchema {
     draftAndPublish: true;
   };
   attributes: {
+    city: Schema.Attribute.String;
+    coverImage: Schema.Attribute.Media<
+      'images' | 'files' | 'videos' | 'audios'
+    >;
     createdAt: Schema.Attribute.DateTime;
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
     description: Schema.Attribute.Text;
+    difficulty: Schema.Attribute.Enumeration<['easy', 'medium', 'hard']>;
+    duration: Schema.Attribute.String;
+    isFeatured: Schema.Attribute.Boolean;
     locale: Schema.Attribute.String & Schema.Attribute.Private;
     localizations: Schema.Attribute.Relation<'oneToMany', 'api::quest.quest'> &
       Schema.Attribute.Private;
+    price: Schema.Attribute.Decimal;
     publishedAt: Schema.Attribute.DateTime;
+    quest_accesses: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::quest-access.quest-access'
+    >;
+    quest_purchases: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::quest-purchase.quest-purchase'
+    >;
     quest_steps: Schema.Attribute.Relation<
       'oneToMany',
       'api::quest-step.quest-step'
     >;
     slug: Schema.Attribute.UID<'title'> & Schema.Attribute.Required;
+    stripePriceId: Schema.Attribute.String;
     title: Schema.Attribute.String & Schema.Attribute.Required;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+  };
+}
+
+export interface ApiRateLimitHitRateLimitHit
+  extends Struct.CollectionTypeSchema {
+  collectionName: 'rate_limit_hits';
+  info: {
+    displayName: 'Rate Limit Hit';
+    pluralName: 'rate-limit-hits';
+    singularName: 'rate-limit-hit';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    expiresAt: Schema.Attribute.DateTime & Schema.Attribute.Required;
+    keyHash: Schema.Attribute.String & Schema.Attribute.Required;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::rate-limit-hit.rate-limit-hit'
+    > &
+      Schema.Attribute.Private;
+    publishedAt: Schema.Attribute.DateTime;
+    scope: Schema.Attribute.String & Schema.Attribute.Required;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+  };
+}
+
+export interface ApiSiteFooterSiteFooter extends Struct.SingleTypeSchema {
+  collectionName: 'site_footers';
+  info: {
+    displayName: 'Site Footer';
+    pluralName: 'site-footers';
+    singularName: 'site-footer';
+  };
+  options: {
+    draftAndPublish: true;
+  };
+  attributes: {
+    brandName: Schema.Attribute.String & Schema.Attribute.Required;
+    copyrightText: Schema.Attribute.String;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    links: Schema.Attribute.Component<'shared.shared-link', true>;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::site-footer.site-footer'
+    > &
+      Schema.Attribute.Private;
+    publishedAt: Schema.Attribute.DateTime;
+    tagline: Schema.Attribute.String;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+  };
+}
+
+export interface ApiSiteSettingSiteSetting extends Struct.SingleTypeSchema {
+  collectionName: 'site_settings';
+  info: {
+    displayName: 'Site setting';
+    pluralName: 'site-settings';
+    singularName: 'site-setting';
+  };
+  options: {
+    draftAndPublish: true;
+  };
+  attributes: {
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    defaultSeoDescription: Schema.Attribute.String;
+    defaultSeoTitle: Schema.Attribute.String;
+    favicon: Schema.Attribute.Media<'images' | 'files' | 'videos' | 'audios'>;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::site-setting.site-setting'
+    > &
+      Schema.Attribute.Private;
+    logo: Schema.Attribute.Media<'images' | 'files' | 'videos' | 'audios'>;
+    logoAlt: Schema.Attribute.String;
+    publishedAt: Schema.Attribute.DateTime;
+    siteName: Schema.Attribute.String & Schema.Attribute.Required;
     updatedAt: Schema.Attribute.DateTime;
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
@@ -1214,9 +1597,19 @@ declare module '@strapi/strapi' {
       'api::author.author': ApiAuthorAuthor;
       'api::category.category': ApiCategoryCategory;
       'api::global.global': ApiGlobalGlobal;
+      'api::home.home': ApiHomeHome;
       'api::navigation.navigation': ApiNavigationNavigation;
+      'api::player-session.player-session': ApiPlayerSessionPlayerSession;
+      'api::purchase-email-template.purchase-email-template': ApiPurchaseEmailTemplatePurchaseEmailTemplate;
+      'api::quest-access.quest-access': ApiQuestAccessQuestAccess;
+      'api::quest-progress-lock.quest-progress-lock': ApiQuestProgressLockQuestProgressLock;
+      'api::quest-progress.quest-progress': ApiQuestProgressQuestProgress;
+      'api::quest-purchase.quest-purchase': ApiQuestPurchaseQuestPurchase;
       'api::quest-step.quest-step': ApiQuestStepQuestStep;
       'api::quest.quest': ApiQuestQuest;
+      'api::rate-limit-hit.rate-limit-hit': ApiRateLimitHitRateLimitHit;
+      'api::site-footer.site-footer': ApiSiteFooterSiteFooter;
+      'api::site-setting.site-setting': ApiSiteSettingSiteSetting;
       'plugin::content-releases.release': PluginContentReleasesRelease;
       'plugin::content-releases.release-action': PluginContentReleasesReleaseAction;
       'plugin::i18n.locale': PluginI18NLocale;

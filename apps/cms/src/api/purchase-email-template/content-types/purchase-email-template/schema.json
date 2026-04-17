@@ -1,0 +1,27 @@
+{
+  "kind": "singleType",
+  "collectionName": "purchase_email_templates",
+  "info": {
+    "singularName": "purchase-email-template",
+    "pluralName": "purchase-email-templates",
+    "displayName": "Purchase Email Template"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "subjectTemplate": {
+      "type": "string",
+      "required": true
+    },
+    "htmlTemplate": {
+      "type": "text",
+      "required": true
+    },
+    "textTemplate": {
+      "type": "text",
+      "required": true
+    }
+  }
+}
