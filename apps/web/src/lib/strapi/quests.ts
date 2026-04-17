@@ -13,6 +13,7 @@ export type Quest = {
   city?: string;
   price?: number;
   isFeatured?: boolean;
+  stepCount?: number;
 };
 
 type StrapiQuestResponse = {
@@ -23,6 +24,11 @@ function normalizeQuest(raw: any): Quest {
   const quest = raw.attributes ?? raw;
 
   const image = quest?.coverImage?.data?.attributes ?? quest?.coverImage;
+  const questSteps = Array.isArray(quest?.quest_steps?.data)
+    ? quest.quest_steps.data
+    : Array.isArray(quest?.quest_steps)
+      ? quest.quest_steps
+      : [];
 
   return {
     title: quest?.title ?? "",
@@ -33,6 +39,7 @@ function normalizeQuest(raw: any): Quest {
     city: quest?.city ?? "",
     price: quest?.price,
     isFeatured: quest?.isFeatured ?? false,
+    stepCount: questSteps.length,
     coverImage: image
       ? {
           url: image.url,
@@ -44,16 +51,20 @@ function normalizeQuest(raw: any): Quest {
 
 export async function getFeaturedQuests(): Promise<Quest[]> {
   const res = await strapiFetch<StrapiQuestResponse>(
-    "/quests?filters[isFeatured]=true&populate=*"
+    "/quests?status=published&filters[isFeatured][$eq]=true&filters[quest_steps][order][$notNull]=true&filters[quest_steps][publishedAt][$notNull]=true&sort[0]=publishedAt:desc&pagination[pageSize]=100&populate=*",
+    { revalidate: 0 }
   );
 
   const quests = res?.data ?? [];
 
-  return quests.map(normalizeQuest);
+  return quests.map(normalizeQuest).filter((quest) => (quest.stepCount ?? 0) > 0);
 }
 
 export async function getAllQuests(): Promise<Quest[]> {
-  const res = await strapiFetch<StrapiQuestResponse>("/quests?populate=*");
+  const res = await strapiFetch<StrapiQuestResponse>(
+    "/quests?status=published&filters[quest_steps][order][$notNull]=true&filters[quest_steps][publishedAt][$notNull]=true&sort[0]=publishedAt:desc&pagination[pageSize]=100&populate=*",
+    { revalidate: 0 }
+  );
   const quests = res?.data ?? [];
-  return quests.map(normalizeQuest);
+  return quests.map(normalizeQuest).filter((quest) => (quest.stepCount ?? 0) > 0);
 }

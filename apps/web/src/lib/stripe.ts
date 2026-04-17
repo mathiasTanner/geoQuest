@@ -8,6 +8,6 @@ export function getStripe() {
   }
 
   return new Stripe(key, {
-    apiVersion: "2026-01-28.clover",
+    apiVersion: "2026-02-25.clover",
   });
 }

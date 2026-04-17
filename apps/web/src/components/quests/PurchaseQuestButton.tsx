@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { getDictionary } from "@/lib/i18n";
 
 type PurchaseQuestButtonProps = {
   questSlug: string;
@@ -11,6 +12,7 @@ export default function PurchaseQuestButton({
   questSlug,
   price,
 }: PurchaseQuestButtonProps) {
+  const t = getDictionary();
   const [loading, setLoading] = useState(false);
 
   const handleClick = async () => {
@@ -41,7 +43,7 @@ export default function PurchaseQuestButton({
       throw new Error("Missing checkout URL");
     } catch (error) {
       console.error(error);
-      alert("Impossible de démarrer le paiement.");
+      alert(t.purchase.startError);
     } finally {
       setLoading(false);
     }
@@ -54,7 +56,9 @@ export default function PurchaseQuestButton({
       disabled={loading}
       className="inline-flex rounded-md bg-primary px-4 py-2 text-primary-foreground hover:bg-[var(--color-primary-hover)] disabled:cursor-not-allowed disabled:opacity-60"
     >
-      {loading ? "Redirection..." : `Acheter cette quête — CHF ${price}`}
+      {loading
+        ? t.purchase.redirecting
+        : `${t.purchase.buyCtaPrefix} ${price}`}
     </button>
   );
 }

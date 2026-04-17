@@ -1,10 +1,16 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import { useRouter } from "next/navigation";
 import { getDictionary } from "@/lib/i18n";
 
 type RedeemResult = {
   success?: boolean;
+  recovered?: boolean;
+  questAccessId?: string;
+  restartCurrentStep?: boolean;
+  warningMessage?: string;
+  resumeHref?: string;
   quest?: {
     title: string;
     slug: string;
@@ -18,14 +24,18 @@ type RedeemFormProps = {
 
 export default function RedeemForm({ initialCode = "" }: RedeemFormProps) {
   const t = getDictionary();
+  const router = useRouter();
   const [code, setCode] = useState(initialCode.toUpperCase());
   const [loading, setLoading] = useState(false);
+  const [redirecting, setRedirecting] = useState(false);
   const [result, setResult] = useState<RedeemResult | null>(null);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setRedirecting(false);
     setResult(null);
+    let didRedirect = false;
 
     try {
       const res = await fetch("/api/redeem", {
@@ -43,11 +53,20 @@ export default function RedeemForm({ initialCode = "" }: RedeemFormProps) {
         return;
       }
 
+      if (data.resumeHref) {
+        didRedirect = true;
+        setRedirecting(true);
+        router.replace(data.resumeHref);
+        return;
+      }
+
       setResult(data);
     } catch {
       setResult({ error: t.redeem.invalidCode });
     } finally {
-      setLoading(false);
+      if (!didRedirect) {
+        setLoading(false);
+      }
     }
   };
 
@@ -65,10 +84,19 @@ export default function RedeemForm({ initialCode = "" }: RedeemFormProps) {
 
         <button
           type="submit"
-          disabled={loading}
+          disabled={loading || redirecting}
           className="inline-flex rounded-md bg-primary px-4 py-2 text-primary-foreground hover:bg-[var(--color-primary-hover)] disabled:opacity-60"
         >
-          {loading ? t.redeem.loading : t.redeem.submit}
+          <span className="inline-flex items-center gap-2">
+            {loading || redirecting ? (
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+            ) : null}
+            {redirecting
+              ? t.redeem.redirecting
+              : loading
+                ? t.redeem.loading
+                : t.redeem.submit}
+          </span>
         </button>
       </form>
 
@@ -81,9 +109,11 @@ export default function RedeemForm({ initialCode = "" }: RedeemFormProps) {
           <p className="font-medium">
             {t.redeem.success} : {result.quest.title}
           </p>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Slug: {result.quest.slug}
-          </p>
+          {result.warningMessage ? (
+            <p className="mt-2 text-sm text-muted-foreground">
+              {result.warningMessage}
+            </p>
+          ) : null}
         </div>
       ) : null}
     </>

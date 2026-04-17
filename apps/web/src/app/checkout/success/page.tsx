@@ -12,13 +12,12 @@ export default async function CheckoutSuccessPage({
 }: CheckoutSuccessPageProps) {
   const params = await searchParams;
   const sessionId = params.session_id;
-
   const dict = getDictionary("fr");
 
   return (
     <main className="mx-auto flex min-h-[70vh] w-full max-w-2xl flex-col items-center justify-center px-6 py-16 text-center">
       <div className="w-full rounded-2xl border p-8 shadow-sm">
-        <div className="mb-6 text-5xl">✓</div>
+        <div className="mb-6 text-5xl">{"\u2713"}</div>
 
         <h1 className="text-3xl font-bold tracking-tight">
           {dict.checkoutSuccess.title}

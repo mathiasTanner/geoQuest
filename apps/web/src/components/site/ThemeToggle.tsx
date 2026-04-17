@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Moon, Sun } from "lucide-react";
+import { getDictionary } from "@/lib/i18n";
 
 type Theme = "light" | "dark";
 
@@ -22,19 +23,20 @@ function getInitialTheme(): Theme {
 }
 
 export default function ThemeToggle() {
+  const t = getDictionary();
   const [theme, setTheme] = useState<Theme>("light");
 
   useEffect(() => {
-    const t = getInitialTheme();
-    setTheme(t);
-    applyTheme(t);
+    const initialTheme = getInitialTheme();
+    setTheme(initialTheme);
+    applyTheme(initialTheme);
   }, []);
 
   const toggle = () => {
-    const next: Theme = theme === "dark" ? "light" : "dark";
-    setTheme(next);
-    localStorage.setItem("theme", next);
-    applyTheme(next);
+    const nextTheme: Theme = theme === "dark" ? "light" : "dark";
+    setTheme(nextTheme);
+    localStorage.setItem("theme", nextTheme);
+    applyTheme(nextTheme);
   };
 
   return (
@@ -42,12 +44,12 @@ export default function ThemeToggle() {
       type="button"
       onClick={toggle}
       className="rounded-md border border-border bg-card px-2 py-1 text-sm hover:bg-muted"
-      aria-label="Toggle theme"
-      title="Toggle theme"
+      aria-label={t.theme.toggleLabel}
+      title={t.theme.toggleLabel}
     >
       {theme === "dark" ? (
         <Moon className="h-4 w-4" aria-hidden="true" />
-        ) : (
+      ) : (
         <Sun className="h-4 w-4" aria-hidden="true" />
       )}
     </button>

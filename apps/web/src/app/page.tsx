@@ -1,5 +1,5 @@
-import Link from "next/link";
 import Image from "next/image";
+import Link from "next/link";
 import Container from "@/components/layout/Container";
 import { getHomePage } from "@/lib/strapi/homePage";
 import { getFeaturedQuests } from "@/lib/strapi/quests";
@@ -52,6 +52,7 @@ export default async function HomePage() {
           ) : null}
         </div>
       </section>
+
       <section className="mt-12">
         {page.featuredQuestsTitle ? (
           <h2 className="text-2xl font-semibold tracking-tight">
@@ -93,8 +94,8 @@ export default async function HomePage() {
 
                 <div className="mt-3 flex flex-wrap gap-2 text-sm text-muted-foreground">
                   {quest.difficulty ? <span>{quest.difficulty}</span> : null}
-                  {quest.duration ? <span>• {quest.duration}</span> : null}
-                  {typeof quest.price === "number" ? <span>• CHF {quest.price}</span> : null}
+                  {quest.duration ? <span>{`\u00b7 ${quest.duration}`}</span> : null}
+                  {typeof quest.price === "number" ? <span>{`\u00b7 CHF ${quest.price}`}</span> : null}
                 </div>
               </Link>
             );

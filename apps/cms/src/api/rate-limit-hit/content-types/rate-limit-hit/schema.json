@@ -1,0 +1,27 @@
+{
+  "kind": "collectionType",
+  "collectionName": "rate_limit_hits",
+  "info": {
+    "singularName": "rate-limit-hit",
+    "pluralName": "rate-limit-hits",
+    "displayName": "Rate Limit Hit"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "scope": {
+      "type": "string",
+      "required": true
+    },
+    "keyHash": {
+      "type": "string",
+      "required": true
+    },
+    "expiresAt": {
+      "type": "datetime",
+      "required": true
+    }
+  }
+}

@@ -1,121 +1,134 @@
-import { NextResponse } from "next/server";
-import { haversineDistanceMeters } from "@/lib/geo/distanceServer";
+import { cookies } from "next/headers";
+import { NextRequest, NextResponse } from "next/server";
+import {
+  advanceOwnedQuestProgress,
+  applyQuestSessionCookie,
+  getActivePlayerSessionFromCookies,
+  getOwnedQuestSummaryForSession,
+} from "@/lib/quests/questAccessSession";
+import { getDictionary } from "@/lib/i18n";
+import { takeRateLimitHit } from "@/lib/security/rateLimit";
+import { isSameOriginWrite } from "@/lib/security/sameOrigin";
 
 type Submission = {
+  questAccessId: string;
   stepDocumentId: string;
   answer: string;
+  version: number;
   coords: { lat: number; lng: number; accuracy: number };
-  submittedAt: number;
+  submittedAt?: number;
 };
 
-function normalize(s: string) {
-  return s.trim().toLowerCase();
-}
+export async function POST(request: NextRequest) {
+  const t = getDictionary();
 
-export async function POST(req: Request) {
-  const body = (await req.json()) as Submission;
-
-  if (!body?.stepDocumentId || !body?.coords || typeof body.answer !== "string") {
-    return NextResponse.json({ ok: false, error: "Bad request" }, { status: 400 });
+  if (!isSameOriginWrite(request)) {
+    return NextResponse.json({ ok: false, error: t.api.invalidOrigin }, { status: 403 });
   }
 
-  const cmsUrl = process.env.CMS_URL || process.env.NEXT_PUBLIC_CMS_URL;
-  if (!cmsUrl) {
-    return NextResponse.json({ ok: false, error: "Missing CMS_URL" }, { status: 500 });
-  }
-
-  // Fetch step from Strapi
-  const token = process.env.STRAPI_API_TOKEN;
-
-  const stepRes = await fetch(
-    `${cmsUrl}/api/quest-steps/${body.stepDocumentId}?populate=quest`,
-    { cache: "no-store", headers: token ? { Authorization: `Bearer ${token}` } : undefined }
+  const rateLimitKey =
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    request.headers.get("x-real-ip") ??
+    "unknown";
+  const rateLimit = await takeRateLimitHit(
+    `submission:${rateLimitKey}`,
+    30,
+    5 * 60 * 1000
   );
 
-  
-  if (!stepRes.ok) {
-    const text = await stepRes.text();
+  if (!rateLimit.allowed) {
     return NextResponse.json(
-      { ok: false, error: `Failed to fetch step: ${stepRes.status}`, details: text },
-      { status: 502 }
+      { ok: false, error: t.api.tooManySubmissions },
+      { status: 429 }
     );
   }
 
-  const stepJson = await stepRes.json();
-  const step = stepJson?.data;
+  const body = (await request.json()) as Submission;
 
-  if (!step) {
-    return NextResponse.json({ ok: false, error: "Step not found" }, { status: 404 });
+  if (
+    !body?.questAccessId ||
+    !body?.stepDocumentId ||
+    !body?.coords ||
+    typeof body.answer !== "string" ||
+    !Number.isFinite(Number(body.version))
+  ) {
+    return NextResponse.json({ ok: false, error: t.api.invalidPayload }, { status: 400 });
   }
 
-  const target = { lat: Number(step.latitude), lng: Number(step.longitude) };
-  const radiusMeters = Number(step.radiusMeters);
-
-  const distance = haversineDistanceMeters(
-    { lat: body.coords.lat, lng: body.coords.lng },
-    target
-  );
-
-  // fairness: don't block players if GPS accuracy is poor
-  const accuracy = Number(body.coords.accuracy ?? 0);
-  const buffer = Math.max(accuracy, 10);
-  const effectiveRadius = radiusMeters + buffer;
-  const locationOk = distance <= effectiveRadius;
-
-
-  // validate answer (text only for now)
-  const puzzleType = step.puzzleType;
-  let answerOk = false;
-
-  if (puzzleType === "text") {
-    const accepted: string[] = step.puzzleDataPrivate?.acceptedAnswers ?? [];
-    answerOk = accepted.map(normalize).includes(normalize(body.answer));
-  } else {
-    return NextResponse.json(
-      { ok: false, error: `Unsupported puzzleType for validation yet: ${puzzleType}` },
-      { status: 400 }
-    );
-  }
-
-  const unlocked = locationOk && answerOk;
-
-  let nextStepDocumentId: string | null = null;
-
-  if (unlocked) {
-    const questDocumentId = step.quest?.documentId;
-    const nextOrder = Number(step.order) + 1;
-
-    if (questDocumentId) {
-      const nextRes = await fetch(
-        `${cmsUrl}/api/quest-steps?filters[quest][documentId][$eq]=${encodeURIComponent(
-          questDocumentId
-        )}&filters[order][$eq]=${nextOrder}&pagination[pageSize]=1`,
-        {
-          cache: "no-store",
-          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-        }
-      );
-
-      if (nextRes.ok) {
-        const nextJson = await nextRes.json();
-        const nextStep = nextJson?.data?.[0];
-        nextStepDocumentId = nextStep?.documentId ?? null;
-      }
-    }
-  }
-
-  return NextResponse.json({
-    ok: true,
-    unlocked,
-    nextStepDocumentId,
-    checks: {
-      locationOk,
-      answerOk,
-      distanceMeters: Math.round(distance),
-      radiusMeters,
-      bufferMeters: Math.round(buffer),
-      effectiveRadiusMeters: Math.round(effectiveRadius),
-      accuracyMeters: Math.round(accuracy),
-    },
+  const cookieStore = await cookies();
+  const session = await getActivePlayerSessionFromCookies(cookieStore, {
+    touch: true,
   });
+
+  if (!session) {
+    return NextResponse.json(
+      { ok: false, error: t.api.missingQuestAccess },
+      { status: 401 }
+    );
+  }
+
+  const ownedQuest = await getOwnedQuestSummaryForSession(
+    session.session,
+    body.questAccessId
+  );
+
+  if (!ownedQuest) {
+    return NextResponse.json(
+      { ok: false, error: t.api.unknownQuestAccess },
+      { status: 404 }
+    );
+  }
+
+  try {
+    const result = await advanceOwnedQuestProgress({
+      questAccessId: body.questAccessId,
+      stepDocumentId: body.stepDocumentId,
+      answer: body.answer,
+      version: Number(body.version),
+      coords: {
+        lat: Number(body.coords.lat),
+        lng: Number(body.coords.lng),
+        accuracy: Number(body.coords.accuracy ?? 0),
+      },
+    });
+
+    const response = NextResponse.json(result);
+    applyQuestSessionCookie(response, session.token, session.expiresAt);
+    return response;
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : t.api.genericStepError;
+    const localizedMessage =
+      message === "Quest access not found"
+        ? t.api.unknownQuestAccess
+        : message === "Quest step not found"
+          ? t.api.unknownStep
+          : message === "Quest progress is stale. Please reload and try again."
+              || message === "Quest progress is being updated. Please reload and try again."
+            ? t.api.staleProgress
+            : message === "This step is not the current step for the quest."
+              ? t.api.wrongCurrentStep
+              : message.startsWith("Unsupported puzzleType")
+                ? t.step.unsupportedPuzzle
+                : message;
+
+    const status =
+        message === "Quest access not found" ||
+        message === "Quest step not found"
+          ? 404
+          : message === "Quest progress is stale. Please reload and try again." ||
+              message === "Quest progress is being updated. Please reload and try again." ||
+              message === "This step is not the current step for the quest."
+            ? 409
+          : message.startsWith("Unsupported puzzleType")
+            ? 400
+            : 500;
+
+    const response = NextResponse.json(
+      { ok: false, error: localizedMessage },
+      { status }
+    );
+    applyQuestSessionCookie(response, session.token, session.expiresAt);
+    return response;
+  }
 }
