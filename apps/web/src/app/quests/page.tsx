@@ -11,6 +11,8 @@ import {
 } from "@/lib/quests/questAccessSession";
 import { getAllQuests } from "@/lib/strapi/quests";
 
+export const dynamic = "force-dynamic";
+
 export default async function QuestsPage() {
   const t = getDictionary();
   const session = await resolvePlayerSessionFromCookies(await cookies());

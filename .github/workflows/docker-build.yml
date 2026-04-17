@@ -1,15 +1,52 @@
 name: Build and Push Docker Images
 
 on:
+  pull_request:
+    branches: ["main"]
   push:
     branches: ["main"]
+  workflow_dispatch:
 
 permissions:
   contents: read
   packages: write
 
 jobs:
+  verify:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.28.1
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck web
+        run: pnpm --filter web exec tsc --noEmit
+
+      - name: Typecheck cms
+        run: pnpm --filter cms exec tsc --noEmit
+
+      - name: Build web
+        run: pnpm --filter web build
+
+      - name: Build cms
+        run: pnpm --filter cms build
+
   build:
+    if: github.event_name == 'push'
+    needs: verify
     runs-on: ubuntu-latest
 
     steps:
@@ -32,7 +69,9 @@ jobs:
           context: .
           file: ./apps/web/Dockerfile
           push: true
-          tags: ghcr.io/${{ env.OWNER_LOWER }}/project-base-web:latest
+          tags: |
+            ghcr.io/${{ env.OWNER_LOWER }}/project-base-web:latest
+            ghcr.io/${{ env.OWNER_LOWER }}/project-base-web:${{ github.sha }}
 
 
       - name: Build and push CMS image
@@ -41,5 +80,6 @@ jobs:
           context: .
           file: ./apps/cms/Dockerfile
           push: true
-          tags: ghcr.io/${{ env.OWNER_LOWER }}/project-base-cms:latest
-
+          tags: |
+            ghcr.io/${{ env.OWNER_LOWER }}/project-base-cms:latest
+            ghcr.io/${{ env.OWNER_LOWER }}/project-base-cms:${{ github.sha }}

@@ -6,6 +6,8 @@ import StorageNotice from "@/components/site/StorageNotice";
 import { getSiteSettings } from "@/lib/strapi/siteSettings";
 import "./globals.css";
 
+export const dynamic = "force-dynamic";
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
