@@ -6,6 +6,8 @@ import {
 } from "@/lib/purchases/questPurchaseWorkflow";
 import { getStripe } from "@/lib/stripe";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(req: NextRequest) {
   const sessionId = req.nextUrl.searchParams.get("session_id");
 
