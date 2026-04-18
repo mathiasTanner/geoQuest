@@ -4,6 +4,8 @@ import Container from "@/components/layout/Container";
 import { getHomePage } from "@/lib/strapi/homePage";
 import { getFeaturedQuests } from "@/lib/strapi/quests";
 
+export const dynamic = "force-dynamic";
+
 export default async function HomePage() {
   const page = await getHomePage();
   const featuredQuests = await getFeaturedQuests();

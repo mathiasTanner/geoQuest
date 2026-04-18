@@ -1,6 +1,8 @@
 import Container from "@/components/layout/Container";
 import { strapiFetch } from "@/lib/strapi/strapiFetch";
 
+export const dynamic = "force-dynamic";
+
 type Page = {
   title: string;
   slug: string;

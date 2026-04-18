@@ -1,28 +1,32 @@
-# ---- deps ----
-FROM node:20-bullseye AS deps
+# ---- base ----
+FROM node:20-bullseye AS base
 WORKDIR /app
 ENV CI=true
-RUN corepack enable && corepack prepare pnpm@latest --activate
+ENV NEXT_TELEMETRY_DISABLED=1
+RUN corepack enable && corepack prepare pnpm@10.28.1 --activate
 
-COPY package.json pnpm-lock.yaml* ./
+# ---- deps ----
+FROM base AS deps
+
+COPY package.json pnpm-lock.yaml* pnpm-workspace.yaml turbo.json ./
+COPY apps/web/package.json ./apps/web/package.json
+COPY apps/cms/package.json ./apps/cms/package.json
 COPY . .
 
 RUN pnpm install --frozen-lockfile
 
 # ---- build ----
-FROM node:20-bullseye AS builder
-WORKDIR /app
-RUN corepack enable && corepack prepare pnpm@latest --activate
-
+FROM base AS builder
 COPY --from=deps /app ./
-RUN pnpm build
+RUN pnpm --filter web build
 
 # ---- run ----
-FROM node:20-bullseye AS runner
+FROM base AS runner
 WORKDIR /app
 ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
 
 COPY --from=builder /app ./
 
 EXPOSE 3000
-CMD ["pnpm", "start"]
+CMD ["pnpm", "--filter", "web", "start"]

@@ -10,6 +10,8 @@ import {
 } from "@/lib/quests/questAccessSession";
 import { strapiFetch } from "@/lib/strapi/strapiFetch";
 
+export const dynamic = "force-dynamic";
+
 type Quest = {
   title: string;
   slug: string;
