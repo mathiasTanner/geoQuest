@@ -70,8 +70,8 @@ jobs:
           file: ./apps/web/Dockerfile
           push: true
           tags: |
-            ghcr.io/${{ env.OWNER_LOWER }}/project-base-web:latest
-            ghcr.io/${{ env.OWNER_LOWER }}/project-base-web:${{ github.sha }}
+            ghcr.io/${{ env.OWNER_LOWER }}/geoquest-web:latest
+            ghcr.io/${{ env.OWNER_LOWER }}/geoquest-web:${{ github.sha }}
 
 
       - name: Build and push CMS image
@@ -81,5 +81,5 @@ jobs:
           file: ./apps/cms/Dockerfile
           push: true
           tags: |
-            ghcr.io/${{ env.OWNER_LOWER }}/project-base-cms:latest
-            ghcr.io/${{ env.OWNER_LOWER }}/project-base-cms:${{ github.sha }}
+            ghcr.io/${{ env.OWNER_LOWER }}/geoquest-cms:latest
+            ghcr.io/${{ env.OWNER_LOWER }}/geoquest-cms:${{ github.sha }}
