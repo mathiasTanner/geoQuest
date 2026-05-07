@@ -30,8 +30,6 @@ async function getQuest(slug: string): Promise<Quest | null> {
   return getQuestBySlug(slug);
 }
 
-export const dynamic = "force-dynamic";
-
 export default async function QuestPage({
   params,
 }: {

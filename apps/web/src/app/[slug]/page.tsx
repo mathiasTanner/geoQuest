@@ -27,8 +27,6 @@ async function getPage(slug: string): Promise<Page | null> {
   };
 }
 
-export const dynamic = "force-dynamic";
-
 export default async function Page({
   params,
 }: {
