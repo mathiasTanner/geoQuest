@@ -10,6 +10,8 @@ type QuestPlayPanelsProps = {
   questSlug: string;
   isCompleted: boolean;
   completedStepsCount: number;
+  progressTitle: string;
+  progressBody: string;
   warningMessage?: string;
   totalDuration?: string | null;
   primaryHref: string;
@@ -21,6 +23,8 @@ export default function QuestPlayPanels({
   questSlug,
   isCompleted,
   completedStepsCount,
+  progressTitle,
+  progressBody,
   warningMessage,
   totalDuration,
   primaryHref,
@@ -57,7 +61,7 @@ export default function QuestPlayPanels({
       }
 
       clearQuestDraftsForQuestAccess(questAccessId);
-      router.replace("/redeem");
+      router.replace("/");
     } catch (caughtError) {
       const message =
         caughtError instanceof Error
@@ -150,8 +154,8 @@ export default function QuestPlayPanels({
               </>
             ) : (
               <>
-                <h2 className="text-xl font-semibold">{t.play.resumeTitle}</h2>
-                <p className="text-muted-foreground">{t.play.resumeBody}</p>
+                <h2 className="text-xl font-semibold">{progressTitle}</h2>
+                <p className="text-muted-foreground">{progressBody}</p>
                 <p className="text-sm text-muted-foreground">
                   {t.play.completedStepsLabel} : {completedStepsCount}
                 </p>

@@ -9,7 +9,7 @@ type Page = {
 
 async function getPage(slug: string): Promise<Page | null> {
   const res = await strapiFetch<any>(
-    `/pages?filters[slug][$eq]=${slug}`
+    `/pages?filters[slug][$eq]=${encodeURIComponent(slug)}`
   );
 
   const page = res?.data?.[0];
@@ -24,6 +24,8 @@ async function getPage(slug: string): Promise<Page | null> {
     content: raw.content,
   };
 }
+
+export const dynamic = "force-dynamic";
 
 export default async function Page({
   params,

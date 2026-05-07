@@ -7,7 +7,15 @@ type SendQuestPurchaseEmailInput = {
   text: string;
 };
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+function getResendClient() {
+  const apiKey = process.env.RESEND_API_KEY;
+
+  if (!apiKey) {
+    throw new Error("Missing RESEND_API_KEY");
+  }
+
+  return new Resend(apiKey);
+}
 
 export function renderTemplate(
   template: string,
@@ -24,15 +32,11 @@ export async function sendQuestPurchaseEmail({
   html,
   text,
 }: SendQuestPurchaseEmailInput) {
-  if (!process.env.RESEND_API_KEY) {
-    throw new Error("Missing RESEND_API_KEY");
-  }
-
   if (!process.env.EMAIL_FROM) {
     throw new Error("Missing EMAIL_FROM");
   }
 
-  const result = await resend.emails.send({
+  const result = await getResendClient().emails.send({
     from: process.env.EMAIL_FROM,
     to,
     subject,

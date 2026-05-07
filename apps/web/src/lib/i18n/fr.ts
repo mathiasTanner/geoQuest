@@ -82,6 +82,9 @@ export const fr = {
     shareSuccess: "Le lien de la qu\u00eate a \u00e9t\u00e9 copi\u00e9.",
     shareError: "Impossible de partager ce r\u00e9sultat pour le moment.",
     durationLessThanMinute: "moins d'une minute",
+    startTitle: "Commencer votre aventure",
+    startBody:
+      "Votre progression sera enregistr\u00e9e automatiquement pour vous permettre de reprendre facilement sur cet appareil.",
     resumeTitle: "Reprendre votre aventure",
     resumeBody:
       "Votre progression est enregistr\u00e9e c\u00f4t\u00e9 serveur et vous pouvez reprendre ici \u00e0 tout moment sur cet appareil.",

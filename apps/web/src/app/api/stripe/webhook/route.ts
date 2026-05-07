@@ -9,6 +9,8 @@ import {
 } from "@/lib/purchases/questPurchaseWorkflow";
 import { getStripe } from "@/lib/stripe";
 
+export const dynamic = "force-dynamic";
+
 export async function POST(req: Request) {
   const stripe = getStripe();
   const body = await req.text();
