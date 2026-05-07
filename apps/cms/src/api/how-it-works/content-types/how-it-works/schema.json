@@ -1,11 +1,11 @@
 {
   "kind": "singleType",
-  "collectionName": "abouts",
+  "collectionName": "how_it_works",
   "info": {
-    "singularName": "about",
-    "pluralName": "abouts",
-    "displayName": "About",
-    "description": "Content for the About us page"
+    "singularName": "how-it-works",
+    "pluralName": "how-it-works-pages",
+    "displayName": "How it works",
+    "description": "Content for the How it works page"
   },
   "options": {
     "draftAndPublish": true

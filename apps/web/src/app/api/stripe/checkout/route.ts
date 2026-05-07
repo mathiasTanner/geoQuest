@@ -1,12 +1,42 @@
-import { NextResponse } from "next/server";
-import { getCmsUrl } from "@/lib/purchases/questPurchaseWorkflow";
+import { NextRequest, NextResponse } from "next/server";
+import {
+  getCmsUrl,
+  getStrapiApiToken,
+} from "@/lib/purchases/questPurchaseWorkflow";
+import {
+  applyCheckoutStateCookie,
+  createCheckoutStateToken,
+} from "@/lib/purchases/checkoutState";
+import { takeRateLimitHit } from "@/lib/security/rateLimit";
+import { isSameOriginWrite } from "@/lib/security/sameOrigin";
 import { getStripe } from "@/lib/stripe";
 
 export const dynamic = "force-dynamic";
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
+  if (!isSameOriginWrite(req)) {
+    return NextResponse.json({ error: "Invalid origin" }, { status: 403 });
+  }
+
+  const rateLimitKey =
+    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    req.headers.get("x-real-ip") ??
+    "unknown";
+  const rateLimit = await takeRateLimitHit(
+    `checkout:${rateLimitKey}`,
+    15,
+    15 * 60 * 1000
+  );
+
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { error: "Too many checkout attempts. Please wait a moment." },
+      { status: 429 }
+    );
+  }
   const body = await req.json();
-  const { questSlug } = body;
+  const questSlug =
+    typeof body?.questSlug === "string" ? body.questSlug.trim() : "";
 
   if (!questSlug) {
     return NextResponse.json(
@@ -18,10 +48,12 @@ export async function POST(req: Request) {
   const cmsUrl = getCmsUrl();
 
   const res = await fetch(
-    `${cmsUrl}/api/quests?filters[slug][$eq]=${questSlug}&populate=*`,
+    `${cmsUrl}/api/quests?filters[slug][$eq]=${encodeURIComponent(
+      questSlug
+    )}&populate[coverImage][fields][0]=url&populate[coverImage][fields][1]=alternativeText`,
     {
       headers: {
-        Authorization: `Bearer ${process.env.STRAPI_API_TOKEN}`,
+        Authorization: `Bearer ${getStrapiApiToken()}`,
       },
       cache: "no-store",
     }
@@ -53,6 +85,7 @@ export async function POST(req: Request) {
   }
 
   const stripe = getStripe();
+  const checkoutState = createCheckoutStateToken();
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
@@ -67,10 +100,13 @@ export async function POST(req: Request) {
     metadata: {
       questSlug,
       questDocumentId: questEntry?.documentId ?? "",
+      checkoutState,
     },
     success_url: `${appUrl}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${appUrl}/quests/${questSlug}`,
   });
 
-  return NextResponse.json({ url: session.url });
+  const response = NextResponse.json({ url: session.url });
+  applyCheckoutStateCookie(response, checkoutState);
+  return response;
 }

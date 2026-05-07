@@ -18,6 +18,10 @@ type QuestPlayPageProps = {
   }>;
 };
 
+type QuestSummary = NonNullable<
+  Awaited<ReturnType<typeof getOwnedQuestSummaryForSession>>
+>;
+
 function formatQuestDuration(
   startedAt: string,
   endedAt: string,
@@ -47,16 +51,9 @@ function formatQuestDuration(
 
 function getPrimaryAction(
   t: ReturnType<typeof getDictionary>,
-  summary: Awaited<ReturnType<typeof getOwnedQuestSummaryForSession>>,
+  summary: QuestSummary,
   isCompleted: boolean
 ) {
-  if (!summary) {
-    return {
-      href: "/quests",
-      label: t.play.completedPrimaryCta,
-    };
-  }
-
   if (isCompleted) {
     return {
       href: "/quests",
@@ -74,6 +71,28 @@ function getPrimaryAction(
   return {
     href: summary.stepHref,
     label: t.play.resumeCta,
+  };
+}
+
+function getProgressCopy(
+  t: ReturnType<typeof getDictionary>,
+  summary: QuestSummary,
+  isCompleted: boolean
+) {
+  if (isCompleted) {
+    return null;
+  }
+
+  if (summary.completedStepsCount === 0 && summary.currentStepOrder <= 1) {
+    return {
+      title: t.play.startTitle,
+      body: t.play.startBody,
+    };
+  }
+
+  return {
+    title: t.play.resumeTitle,
+    body: t.play.resumeBody,
   };
 }
 
@@ -103,6 +122,7 @@ export default async function QuestPlayPage({
     summary.progressStatus === "completed" ||
     resolvedSearchParams.completed === "1";
   const primaryAction = getPrimaryAction(t, summary, isCompleted);
+  const progressCopy = getProgressCopy(t, summary, isCompleted);
   const totalDuration = isCompleted
     ? formatQuestDuration(
         summary.firstRedeemedAt,
@@ -146,6 +166,8 @@ export default async function QuestPlayPage({
         questSlug={summary.questSlug}
         isCompleted={isCompleted}
         completedStepsCount={summary.completedStepsCount}
+        progressTitle={progressCopy?.title ?? t.play.resumeTitle}
+        progressBody={progressCopy?.body ?? t.play.resumeBody}
         warningMessage={summary.warningMessage}
         totalDuration={totalDuration}
         primaryHref={primaryAction.href}

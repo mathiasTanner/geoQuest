@@ -8,7 +8,7 @@ import {
   getOwnedQuestSummaryForSessionByQuestSlug,
   resolvePlayerSessionFromCookies,
 } from "@/lib/quests/questAccessSession";
-import { strapiFetch } from "@/lib/strapi/strapiFetch";
+import { getQuestBySlug } from "@/lib/strapi/quests";
 
 export const dynamic = "force-dynamic";
 
@@ -27,33 +27,7 @@ type Quest = {
 };
 
 async function getQuest(slug: string): Promise<Quest | null> {
-  const res = await strapiFetch<any>(
-    `/quests?status=published&filters[slug][$eq]=${slug}&filters[quest_steps][order][$notNull]=true&filters[quest_steps][publishedAt][$notNull]=true&populate=*`,
-    { revalidate: 0 }
-  );
-
-  const quest = res?.data?.[0];
-
-  if (!quest) return null;
-
-  const raw = quest.attributes ?? quest;
-  const image = raw?.coverImage?.data?.attributes ?? raw?.coverImage;
-
-  return {
-    title: raw.title,
-    slug: raw.slug,
-    description: raw.description,
-    duration: raw.duration,
-    difficulty: raw.difficulty,
-    city: raw.city,
-    price: raw.price,
-    coverImage: image
-      ? {
-          url: image.url,
-          alternativeText: image.alternativeText ?? "",
-        }
-      : undefined,
-  };
+  return getQuestBySlug(slug);
 }
 
 export default async function QuestPage({

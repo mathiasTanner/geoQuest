@@ -81,9 +81,11 @@ export default async function HomePage() {
                 className="block rounded-lg border border-border bg-card p-4 transition hover:bg-muted"
               >
                 {coverImageUrl ? (
-                  <img
+                  <Image
                     src={coverImageUrl}
                     alt={quest.coverImage?.alternativeText ?? quest.title}
+                    width={1200}
+                    height={800}
                     className="mb-4 h-48 w-full rounded-md object-cover"
                   />
                 ) : null}

@@ -12,6 +12,8 @@ type RedeemRequestBody = {
   code?: string;
 };
 
+export const dynamic = "force-dynamic";
+
 export async function POST(request: NextRequest) {
   const t = getDictionary();
 
