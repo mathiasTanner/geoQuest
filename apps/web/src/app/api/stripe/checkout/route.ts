@@ -34,7 +34,6 @@ export async function POST(req: NextRequest) {
       { status: 429 }
     );
   }
-
   const body = await req.json();
   const questSlug =
     typeof body?.questSlug === "string" ? body.questSlug.trim() : "";
