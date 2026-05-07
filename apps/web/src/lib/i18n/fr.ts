@@ -57,6 +57,13 @@ export const fr = {
     redeemCta: "J'ai un code",
   },
 
+  contentPages: {
+    aboutFallbackTitle: "\u00c0 propos",
+    howItWorksFallbackTitle: "Comment \u00e7a marche",
+    unavailableSubtitle:
+      "Cette page est en pr\u00e9paration et sera disponible tr\u00e8s bient\u00f4t.",
+  },
+
   purchase: {
     redirecting: "Redirection...",
     startError: "Impossible de d\u00e9marrer le paiement.",
