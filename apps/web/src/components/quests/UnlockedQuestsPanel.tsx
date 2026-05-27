@@ -24,6 +24,14 @@ function getQuestActionLabel(
   return t.play.resumeCta;
 }
 
+function getQuestActionHref(quest: OwnedQuestSummary) {
+  if (quest.progressStatus === "completed") {
+    return quest.playHref;
+  }
+
+  return quest.stepHref;
+}
+
 export default function UnlockedQuestsPanel({
   quests,
 }: UnlockedQuestsPanelProps) {
@@ -83,7 +91,7 @@ export default function UnlockedQuestsPanel({
                 ) : null}
 
                 <Link
-                  href={quest.playHref}
+                  href={getQuestActionHref(quest)}
                   className="inline-flex rounded-md bg-primary px-4 py-2 text-primary-foreground transition hover:bg-[var(--color-primary-hover)]"
                 >
                   {getQuestActionLabel(t, quest)}

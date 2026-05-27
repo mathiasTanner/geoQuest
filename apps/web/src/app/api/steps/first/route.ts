@@ -41,6 +41,8 @@ export async function GET() {
     documentId: step.documentId,
     order: step.order,
     title: step.title,
+    flavorText: step.flavorText,
+    successText: step.successText,
     latitude: step.latitude,
     longitude: step.longitude,
     radiusMeters: step.radiusMeters,

@@ -1,22 +1,18 @@
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import {
-  advanceOwnedQuestProgress,
   applyQuestSessionCookie,
   getActivePlayerSessionFromCookies,
-  getOwnedQuestSummaryForSession,
+  previewHangmanForOwnedQuest,
 } from "@/lib/quests/questAccessSession";
 import { getDictionary } from "@/lib/i18n";
 import { takeRateLimitHit } from "@/lib/security/rateLimit";
 import { isSameOriginWrite } from "@/lib/security/sameOrigin";
 
-type Submission = {
+type PreviewRequestBody = {
   questAccessId: string;
   stepDocumentId: string;
-  submission: unknown;
-  version: number;
-  coords: { lat: number; lng: number; accuracy: number };
-  submittedAt?: number;
+  guessedLetters: string[];
 };
 
 export const dynamic = "force-dynamic";
@@ -33,8 +29,8 @@ export async function POST(request: NextRequest) {
     request.headers.get("x-real-ip") ??
     "unknown";
   const rateLimit = await takeRateLimitHit(
-    `submission:${rateLimitKey}`,
-    30,
+    `hangman-preview:${rateLimitKey}`,
+    120,
     5 * 60 * 1000
   );
 
@@ -45,14 +41,12 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const body = (await request.json()) as Submission;
+  const body = (await request.json()) as PreviewRequestBody;
 
   if (
     !body?.questAccessId ||
     !body?.stepDocumentId ||
-    !body?.coords ||
-    !body.submission ||
-    !Number.isFinite(Number(body.version))
+    !Array.isArray(body.guessedLetters)
   ) {
     return NextResponse.json({ ok: false, error: t.api.invalidPayload }, { status: 400 });
   }
@@ -69,32 +63,15 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const ownedQuest = await getOwnedQuestSummaryForSession(
-    session.session,
-    body.questAccessId
-  );
-
-  if (!ownedQuest) {
-    return NextResponse.json(
-      { ok: false, error: t.api.unknownQuestAccess },
-      { status: 404 }
-    );
-  }
-
   try {
-    const result = await advanceOwnedQuestProgress({
-      questAccessId: body.questAccessId,
-      stepDocumentId: body.stepDocumentId,
-      submission: body.submission,
-      version: Number(body.version),
-      coords: {
-        lat: Number(body.coords.lat),
-        lng: Number(body.coords.lng),
-        accuracy: Number(body.coords.accuracy ?? 0),
-      },
-    });
+    const preview = await previewHangmanForOwnedQuest(
+      session.session,
+      body.questAccessId,
+      body.stepDocumentId,
+      body.guessedLetters
+    );
 
-    const response = NextResponse.json(result);
+    const response = NextResponse.json({ ok: true, preview });
     applyQuestSessionCookie(response, session.token, session.expiresAt);
     return response;
   } catch (error) {
@@ -105,27 +82,17 @@ export async function POST(request: NextRequest) {
         ? t.api.unknownQuestAccess
         : message === "Quest step not found"
           ? t.api.unknownStep
-          : message === "Quest progress is stale. Please reload and try again."
-              || message === "Quest progress is being updated. Please reload and try again."
-            ? t.api.staleProgress
-            : message === "This step is not the current step for the quest."
-              ? t.api.wrongCurrentStep
-              : message.startsWith("Submission type does not match current puzzle type:")
-                ? t.api.invalidPayload
-                : message.startsWith("Unsupported puzzleType")
-                  ? t.step.unsupportedPuzzle
-                  : message;
+          : message === "This step is not the current step for the quest."
+            ? t.api.wrongCurrentStep
+            : message.startsWith("Unsupported puzzleType")
+              ? t.step.unsupportedPuzzle
+              : message;
 
     const status =
-        message === "Quest access not found" ||
-        message === "Quest step not found"
-          ? 404
-          : message === "Quest progress is stale. Please reload and try again." ||
-              message === "Quest progress is being updated. Please reload and try again." ||
-              message === "This step is not the current step for the quest."
-            ? 409
-          : message.startsWith("Submission type does not match current puzzle type:")
-            ? 400
+      message === "Quest access not found" || message === "Quest step not found"
+        ? 404
+        : message === "This step is not the current step for the quest."
+          ? 409
           : message.startsWith("Unsupported puzzleType")
             ? 400
             : 500;

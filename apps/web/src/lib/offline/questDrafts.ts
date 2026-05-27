@@ -1,11 +1,39 @@
+import type { PuzzleSubmission } from "@/lib/quests/puzzleTypes";
+
 const DRAFT_STORAGE_PREFIX = "geoquest:draft:";
 
-export type QuestDraft = {
+type QuestDraftBase = {
   questAccessId: string;
   stepDocumentId: string;
-  answer: string;
   savedAt: number;
+  stepRevision?: string;
 };
+
+export type SudokuDraftMeta = {
+  startedAt?: number;
+  checkCount?: number;
+  solveCount?: number;
+};
+
+export type TextQuestDraft = QuestDraftBase & {
+  type: "text";
+  answer: string;
+};
+
+export type HangmanQuestDraft = QuestDraftBase & {
+  type: "hangman";
+  guessedLetters: string[];
+};
+
+export type SudokuQuestDraft = QuestDraftBase & {
+  type: "sudoku";
+  grid: number[][];
+} & SudokuDraftMeta;
+
+export type QuestDraft =
+  | TextQuestDraft
+  | HangmanQuestDraft
+  | SudokuQuestDraft;
 
 function hasWindow() {
   return typeof window !== "undefined" && typeof window.localStorage !== "undefined";
@@ -15,9 +43,100 @@ function getDraftKey(questAccessId: string, stepDocumentId: string) {
   return `${DRAFT_STORAGE_PREFIX}${questAccessId}:${stepDocumentId}`;
 }
 
+function isGrid(value: unknown): value is number[][] {
+  return (
+    Array.isArray(value) &&
+    value.every(
+      (row) =>
+        Array.isArray(row) &&
+        row.every((cell) => Number.isInteger(Number(cell)))
+    )
+  );
+}
+
+function normalizeDraft(
+  value: unknown,
+  questAccessId: string,
+  stepDocumentId: string,
+  stepRevision?: string
+): QuestDraft | null {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+
+  const raw = value as Partial<QuestDraft> & { answer?: unknown };
+  const savedAt = Number(raw.savedAt ?? Date.now());
+
+  if ((raw.stepRevision ?? undefined) !== (stepRevision ?? undefined)) {
+    return null;
+  }
+
+  if (
+    raw.type === "text" &&
+    typeof raw.answer === "string"
+  ) {
+    return {
+      questAccessId,
+      stepDocumentId,
+      type: "text",
+      answer: raw.answer,
+      savedAt,
+    };
+  }
+
+  if (
+    raw.type === "hangman" &&
+    Array.isArray(raw.guessedLetters) &&
+    raw.guessedLetters.every((entry) => typeof entry === "string")
+  ) {
+    return {
+      questAccessId,
+      stepDocumentId,
+      type: "hangman",
+      guessedLetters: raw.guessedLetters,
+      savedAt,
+    };
+  }
+
+  if (raw.type === "sudoku" && isGrid(raw.grid)) {
+    return {
+      questAccessId,
+      stepDocumentId,
+      type: "sudoku",
+      grid: raw.grid.map((row) => row.map((cell) => Number(cell))),
+      startedAt:
+        Number.isFinite(Number((raw as SudokuQuestDraft).startedAt))
+          ? Number((raw as SudokuQuestDraft).startedAt)
+          : undefined,
+      checkCount:
+        Number.isFinite(Number((raw as SudokuQuestDraft).checkCount))
+          ? Number((raw as SudokuQuestDraft).checkCount)
+          : undefined,
+      solveCount:
+        Number.isFinite(Number((raw as SudokuQuestDraft).solveCount))
+          ? Number((raw as SudokuQuestDraft).solveCount)
+          : undefined,
+      savedAt,
+    };
+  }
+
+  if (typeof raw.answer === "string") {
+    return {
+      questAccessId,
+      stepDocumentId,
+      type: "text",
+      answer: raw.answer,
+      savedAt,
+    };
+  }
+
+  return null;
+}
+
 export function loadQuestDraft(
   questAccessId: string,
-  stepDocumentId: string
+  stepDocumentId: string,
+  stepRevision?: string
 ): QuestDraft | null {
   if (!hasWindow()) {
     return null;
@@ -30,7 +149,12 @@ export function loadQuestDraft(
   }
 
   try {
-    return JSON.parse(raw) as QuestDraft;
+    return normalizeDraft(
+      JSON.parse(raw),
+      questAccessId,
+      stepDocumentId,
+      stepRevision
+    );
   } catch {
     return null;
   }
@@ -39,7 +163,9 @@ export function loadQuestDraft(
 export function saveQuestDraft(
   questAccessId: string,
   stepDocumentId: string,
-  answer: string
+  stepRevision: string | undefined,
+  draftValue: PuzzleSubmission,
+  extras?: SudokuDraftMeta
 ) {
   if (!hasWindow()) {
     return;
@@ -48,8 +174,10 @@ export function saveQuestDraft(
   const draft: QuestDraft = {
     questAccessId,
     stepDocumentId,
-    answer,
     savedAt: Date.now(),
+    stepRevision,
+    ...draftValue,
+    ...(draftValue.type === "sudoku" ? extras : undefined),
   };
 
   window.localStorage.setItem(getDraftKey(questAccessId, stepDocumentId), JSON.stringify(draft));
