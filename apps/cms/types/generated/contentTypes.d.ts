@@ -942,6 +942,7 @@ export interface ApiQuestStepQuestStep extends Struct.CollectionTypeSchema {
     createdAt: Schema.Attribute.DateTime;
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
+    flavorText: Schema.Attribute.Text;
     latitude: Schema.Attribute.Decimal & Schema.Attribute.Required;
     locale: Schema.Attribute.String & Schema.Attribute.Private;
     localizations: Schema.Attribute.Relation<
@@ -966,6 +967,7 @@ export interface ApiQuestStepQuestStep extends Struct.CollectionTypeSchema {
         },
         number
       >;
+    successText: Schema.Attribute.Text;
     title: Schema.Attribute.String;
     updatedAt: Schema.Attribute.DateTime;
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &

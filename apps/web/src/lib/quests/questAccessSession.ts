@@ -7,6 +7,19 @@ import {
   unwrapStrapiEntity,
 } from "@/lib/purchases/questPurchaseWorkflow";
 import { getDictionary } from "@/lib/i18n";
+import {
+  buildHangmanPreview,
+  evaluateSudokuGrid,
+  parsePrivatePuzzleData,
+  parsePublicPuzzleData,
+  parsePuzzleSubmission,
+  validateHangmanSubmission,
+  validateSudokuSubmission,
+  validateTextSubmission,
+  type HangmanPreview,
+  type PuzzleSubmission,
+  type SudokuEvaluation,
+} from "@/lib/quests/puzzleTypes";
 
 export const QUEST_SESSION_COOKIE_NAME = "gq_session";
 
@@ -94,19 +107,15 @@ export type QuestStepData = {
   documentId?: string;
   order: number;
   title?: string | null;
+  flavorText?: string | null;
+  successText?: string | null;
+  updatedAt?: string | null;
   latitude: number | string;
   longitude: number | string;
   radiusMeters: number | string;
   puzzleType: string;
-  puzzleDataPublic?: {
-    prompt?: string;
-    hint?: string;
-    [key: string]: unknown;
-  } | null;
-  puzzleDataPrivate?: {
-    acceptedAnswers?: string[];
-    [key: string]: unknown;
-  } | null;
+  puzzleDataPublic?: Record<string, unknown> | null;
+  puzzleDataPrivate?: Record<string, unknown> | null;
   quest?: unknown;
 };
 
@@ -1124,37 +1133,67 @@ export async function forgetQuestAccessForSession(
   });
 }
 
-function normalizeAnswer(value: string) {
-  return value.trim().toLowerCase();
-}
-
-function validateAnswer(step: StrapiEntity<QuestStepData>, answer: string) {
+function validateSubmission(
+  step: StrapiEntity<QuestStepData>,
+  submission: PuzzleSubmission
+) {
   const stepData = unwrapStrapiEntity<QuestStepData>(step);
 
   if (!stepData) {
     return false;
   }
 
-  if (stepData.puzzleType !== "text") {
+  if (stepData.puzzleType !== submission.type) {
     throw new Error(
-      `Unsupported puzzleType for validation yet: ${stepData.puzzleType}`
+      `Submission type does not match current puzzle type: ${stepData.puzzleType}`
     );
   }
 
-  const acceptedAnswers = stepData.puzzleDataPrivate?.acceptedAnswers ?? [];
-  return acceptedAnswers.map(normalizeAnswer).includes(normalizeAnswer(answer));
+  const publicPuzzle = parsePublicPuzzleData(
+    stepData.puzzleType,
+    stepData.puzzleDataPublic ?? {}
+  );
+  const privatePuzzle = parsePrivatePuzzleData(
+    stepData.puzzleType,
+    stepData.puzzleDataPrivate ?? {}
+  );
+
+  switch (submission.type) {
+    case "text":
+      if (privatePuzzle.type !== "text") {
+        return false;
+      }
+
+      return validateTextSubmission(privatePuzzle.data, submission);
+    case "hangman":
+      if (publicPuzzle.type !== "hangman" || privatePuzzle.type !== "hangman") {
+        return false;
+      }
+
+      return validateHangmanSubmission(
+        publicPuzzle.data,
+        privatePuzzle.data,
+        submission
+      );
+    case "sudoku":
+      if (privatePuzzle.type !== "sudoku") {
+        return false;
+      }
+
+      return validateSudokuSubmission(privatePuzzle.data, submission);
+  }
 }
 
 export async function advanceOwnedQuestProgress({
-  answer,
   coords,
   questAccessId,
+  submission,
   stepDocumentId,
   version,
 }: {
-  answer: string;
   coords: { lat: number; lng: number; accuracy: number };
   questAccessId: string;
+  submission: unknown;
   stepDocumentId: string;
   version: number;
 }) {
@@ -1216,6 +1255,11 @@ export async function advanceOwnedQuestProgress({
       throw new Error("Quest step is missing data");
     }
 
+    const parsedSubmission = parsePuzzleSubmission(
+      stepData.puzzleType,
+      submission
+    );
+
     const { haversineDistanceMeters } = await import("@/lib/geo/distanceServer");
     const distance = haversineDistanceMeters(
       { lat: coords.lat, lng: coords.lng },
@@ -1230,7 +1274,7 @@ export async function advanceOwnedQuestProgress({
     const radiusMeters = Number(stepData.radiusMeters);
     const effectiveRadius = radiusMeters + buffer;
     const locationOk = distance <= effectiveRadius;
-    const answerOk = validateAnswer(step, answer);
+    const answerOk = validateSubmission(step, parsedSubmission);
     const unlocked = locationOk && answerOk;
     const activityTime = now().toISOString();
 
@@ -1351,11 +1395,117 @@ export async function getCurrentStepForOwnedQuest(
       documentId: stepDocumentId,
       order: Number(stepData.order),
       title: stepData.title ?? "",
+      flavorText: stepData.flavorText ?? "",
+      successText: stepData.successText ?? "",
+      updatedAt: stepData.updatedAt ?? "",
       latitude: Number(stepData.latitude),
       longitude: Number(stepData.longitude),
       radiusMeters: Number(stepData.radiusMeters),
       puzzleType: stepData.puzzleType,
-      puzzleDataPublic: stepData.puzzleDataPublic ?? {},
+      puzzleDataPublic: parsePublicPuzzleData(
+        stepData.puzzleType,
+        stepData.puzzleDataPublic ?? {}
+      ).data,
     },
   };
+}
+
+export async function previewHangmanForOwnedQuest(
+  session: StrapiEntity<PlayerSessionData>,
+  questAccessId: string,
+  stepDocumentId: string,
+  guessedLetters: string[]
+): Promise<HangmanPreview> {
+  const summary = await getOwnedQuestSummaryForSession(session, questAccessId);
+
+  if (!summary) {
+    throw new Error("Quest access not found");
+  }
+
+  if (summary.currentStepDocumentId !== stepDocumentId) {
+    throw new Error("This step is not the current step for the quest.");
+  }
+
+  const step = await fetchQuestStepByDocumentId(stepDocumentId, true);
+
+  if (!step) {
+    throw new Error("Quest step not found");
+  }
+
+  const stepData = unwrapStrapiEntity<QuestStepData>(step);
+
+  if (!stepData) {
+    throw new Error("Quest step is missing data");
+  }
+
+  if (stepData.puzzleType !== "hangman") {
+    throw new Error(
+      `Unsupported puzzleType for validation yet: ${stepData.puzzleType}`
+    );
+  }
+
+  const publicPuzzle = parsePublicPuzzleData(
+    stepData.puzzleType,
+    stepData.puzzleDataPublic ?? {}
+  );
+  const privatePuzzle = parsePrivatePuzzleData(
+    stepData.puzzleType,
+    stepData.puzzleDataPrivate ?? {}
+  );
+
+  if (publicPuzzle.type !== "hangman" || privatePuzzle.type !== "hangman") {
+    throw new Error("Hangman puzzle data is invalid.");
+  }
+
+  return buildHangmanPreview(
+    privatePuzzle.data.solution,
+    guessedLetters,
+    publicPuzzle.data.maxWrongGuesses
+  );
+}
+
+export async function evaluateSudokuForOwnedQuest(
+  session: StrapiEntity<PlayerSessionData>,
+  questAccessId: string,
+  stepDocumentId: string,
+  grid: number[][]
+): Promise<SudokuEvaluation> {
+  const summary = await getOwnedQuestSummaryForSession(session, questAccessId);
+
+  if (!summary) {
+    throw new Error("Quest access not found");
+  }
+
+  if (summary.currentStepDocumentId !== stepDocumentId) {
+    throw new Error("This step is not the current step for the quest.");
+  }
+
+  const step = await fetchQuestStepByDocumentId(stepDocumentId, true);
+
+  if (!step) {
+    throw new Error("Quest step not found");
+  }
+
+  const stepData = unwrapStrapiEntity<QuestStepData>(step);
+
+  if (!stepData) {
+    throw new Error("Quest step is missing data");
+  }
+
+  if (stepData.puzzleType !== "sudoku") {
+    throw new Error(
+      `Unsupported puzzleType for validation yet: ${stepData.puzzleType}`
+    );
+  }
+
+  const privatePuzzle = parsePrivatePuzzleData(
+    stepData.puzzleType,
+    stepData.puzzleDataPrivate ?? {}
+  );
+
+  if (privatePuzzle.type !== "sudoku") {
+    throw new Error("Sudoku puzzle data is invalid.");
+  }
+
+  return evaluateSudokuGrid(privatePuzzle.data.solutionGrid, grid);
 }

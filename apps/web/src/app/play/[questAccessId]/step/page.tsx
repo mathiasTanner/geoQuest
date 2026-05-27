@@ -39,6 +39,7 @@ export default async function QuestStepPage({ params }: QuestStepPageProps) {
     <Container className="py-8">
       <QuestSessionHeartbeat />
       <QuestStepPlayer
+        key={currentStep.step.documentId}
         questAccessId={currentStep.summary.questAccessId}
         questTitle={currentStep.summary.questTitle}
         warningMessage={currentStep.summary.warningMessage}

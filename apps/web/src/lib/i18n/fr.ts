@@ -108,6 +108,51 @@ export const fr = {
     hintLabel: "Indice",
     answerLabel: "Votre r\u00e9ponse",
     answerPlaceholder: "Entrez votre r\u00e9ponse",
+    hangmanCategoryLabel: "Cat\u00e9gorie",
+    hangmanAttemptsRemaining: "Essais restants",
+    hangmanWrongLetters: "Lettres manqu\u00e9es",
+    hangmanSolved: "Le mot est trouv\u00e9. Vous pouvez valider cette \u00e9tape.",
+    hangmanLoading: "Mise \u00e0 jour du mot...",
+    hangmanGenericError: "Impossible de mettre \u00e0 jour la partie de pendu.",
+    hangmanNotSolved: "Le mot n'est pas encore compl\u00e8tement trouv\u00e9.",
+    sudokuSelectCell:
+      "Touchez une case vide, puis choisissez un chiffre pour remplir la grille.",
+    sudokuSelectedCell:
+      "Choisissez un chiffre ci-dessous ou effacez la case s\u00e9lectionn\u00e9e.",
+    sudokuCheckButton: "CHECK",
+    sudokuSolveButton: "SOLVE",
+    sudokuChecking: "V\u00e9rification en cours...",
+    sudokuSolving: "R\u00e9solution en cours...",
+    sudokuClearCell: "Effacer la case",
+    sudokuResetGrid: "Recommencer la grille",
+    sudokuIncorrect: "La grille n'est pas encore correcte.",
+    sudokuCheckSuccessShort: "Aucune erreur",
+    sudokuCheckSuccess:
+      "Aucune erreur n'a \u00e9t\u00e9 d\u00e9tect\u00e9e pour l'instant.",
+    sudokuCheckErrors:
+      "Des erreurs sont surlign\u00e9es en rouge dans la grille.",
+    sudokuSolveIncomplete:
+      "La grille doit \u00eatre compl\u00e9t\u00e9e et corrig\u00e9e avant de pouvoir \u00eatre r\u00e9solue.",
+    sudokuSolveErrors:
+      "La grille contient encore des erreurs. Les cases probl\u00e9matiques restent affich\u00e9es en rouge.",
+    sudokuEvaluationError:
+      "Impossible de v\u00e9rifier la grille pour le moment.",
+    sudokuCompletionEyebrow: "Sudoku termin\u00e9",
+    sudokuCompletionTitle: "F\u00e9licitations !",
+    sudokuStatTime: "Temps",
+    sudokuStatChecks: "Nombre de CHECK",
+    sudokuStatSolves: "Nombre de SOLVE",
+    flavorTextLabel: "Contexte",
+    successTitle: "\u00c9tape valid\u00e9e",
+    successContinue: "Voir l'\u00e9tape suivante",
+    successQuestComplete: "Voir le r\u00e9capitulatif",
+    successDefaultBody:
+      "Vous avez trouv\u00e9 la bonne solution. L'indice suivant est maintenant d\u00e9bloqu\u00e9.",
+    successCompletedBody:
+      "Bravo, cette derni\u00e8re \u00e9tape est termin\u00e9e. Vous pouvez maintenant consulter le r\u00e9capitulatif de votre qu\u00eate.",
+    openingNextStep: "Ouverture de l'\u00e9tape suivante...",
+    openingRecap: "Ouverture du r\u00e9capitulatif...",
+    resetStep: "Recommencer cette \u00e9tape",
     validateButton: "Valider cette \u00e9tape",
     validating: "Validation...",
     checkingLocation: "V\u00e9rification de votre position...",
