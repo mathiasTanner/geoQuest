@@ -30,10 +30,16 @@ export type SudokuQuestDraft = QuestDraftBase & {
   grid: number[][];
 } & SudokuDraftMeta;
 
+export type AlphabetQuestDraft = QuestDraftBase & {
+  type: "alphabet";
+  assignments: Record<string, string>;
+};
+
 export type QuestDraft =
   | TextQuestDraft
   | HangmanQuestDraft
-  | SudokuQuestDraft;
+  | SudokuQuestDraft
+  | AlphabetQuestDraft;
 
 function hasWindow() {
   return typeof window !== "undefined" && typeof window.localStorage !== "undefined";
@@ -50,6 +56,17 @@ function isGrid(value: unknown): value is number[][] {
       (row) =>
         Array.isArray(row) &&
         row.every((cell) => Number.isInteger(Number(cell)))
+    )
+  );
+}
+
+function isAlphabetAssignments(value: unknown): value is Record<string, string> {
+  return (
+    value !== null &&
+    typeof value === "object" &&
+    !Array.isArray(value) &&
+    Object.entries(value).every(
+      ([key, entry]) => typeof key === "string" && typeof entry === "string"
     )
   );
 }
@@ -116,6 +133,18 @@ function normalizeDraft(
         Number.isFinite(Number((raw as SudokuQuestDraft).solveCount))
           ? Number((raw as SudokuQuestDraft).solveCount)
           : undefined,
+      savedAt,
+    };
+  }
+
+  if (raw.type === "alphabet" && isAlphabetAssignments(raw.assignments)) {
+    return {
+      questAccessId,
+      stepDocumentId,
+      type: "alphabet",
+      assignments: Object.fromEntries(
+        Object.entries(raw.assignments).map(([key, value]) => [key, value])
+      ),
       savedAt,
     };
   }

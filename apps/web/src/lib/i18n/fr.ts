@@ -115,6 +115,47 @@ export const fr = {
     hangmanLoading: "Mise \u00e0 jour du mot...",
     hangmanGenericError: "Impossible de mettre \u00e0 jour la partie de pendu.",
     hangmanNotSolved: "Le mot n'est pas encore compl\u00e8tement trouv\u00e9.",
+    alphabetSelectSymbol:
+      "Choisissez une lettre, puis touchez un symbole pour la placer partout o\u00f9 il appara\u00eet.",
+    alphabetSelectLetterFirst:
+      "Choisissez d'abord une lettre ou activez le mode effacer.",
+    alphabetFocusedSymbol: "Symbole s\u00e9lectionn\u00e9 : {symbol}",
+    alphabetLetterSelected: "Lettre s\u00e9lectionn\u00e9e : {letter}",
+    alphabetLetterInUse:
+      "Cette lettre est d\u00e9j\u00e0 utilis\u00e9e pour un autre symbole. Effacez-la d'abord si vous voulez la d\u00e9placer.",
+    alphabetEraseButton: "EFFACER",
+    alphabetEraseModeSelected:
+      "Mode effacer activ\u00e9. Touchez un symbole rempli pour retirer sa lettre partout.",
+    alphabetUndoButton: "PR\u00c9C\u00c9DENT",
+    alphabetResetButton: "RESET",
+    alphabetHelpButton: "Aide",
+    alphabetHelpTitle: "Comment jouer",
+    alphabetHelpClose: "Fermer",
+    alphabetHelpDefaultBody:
+      "Chaque symbole correspond \u00e0 une seule lettre, et chaque lettre ne peut appartenir qu'\u00e0 un seul symbole.\n\n1. Touchez une lettre ci-dessous.\n2. Touchez ensuite un symbole dans la grille pour l'appliquer partout.\n3. Utilisez CHECK pour voir s'il reste des erreurs.\n4. Utilisez SOLVE quand vous pensez avoir tout trouv\u00e9.\n\nLe bouton EFFACER retire une lettre d\u00e9j\u00e0 plac\u00e9e et PR\u00c9C\u00c9DENT annule votre derni\u00e8re action.",
+    alphabetProgressLabel: "{filled} / {total} symboles remplis",
+    alphabetCheckButton: "CHECK",
+    alphabetSolveButton: "SOLVE",
+    alphabetChecking: "V\u00e9rification en cours...",
+    alphabetSolving: "R\u00e9solution en cours...",
+    alphabetIncorrect: "Le message cod\u00e9 n'est pas encore correct.",
+    alphabetCheckSuccessShort: "Aucune erreur",
+    alphabetCheckSuccess:
+      "Aucune erreur n'a \u00e9t\u00e9 d\u00e9tect\u00e9e pour l'instant.",
+    alphabetCheckErrorsShort: "Erreurs d\u00e9tect\u00e9es",
+    alphabetCheckErrors:
+      "Certaines lettres sont incorrectes. Les symboles concern\u00e9s sont surlign\u00e9s.",
+    alphabetSolveIncomplete:
+      "Remplissez encore les symboles manquants avant de pouvoir r\u00e9soudre cette \u00e9nigme.",
+    alphabetSolveErrors:
+      "Le message contient encore des erreurs. Corrigez les symboles surlign\u00e9s puis r\u00e9essayez.",
+    alphabetEvaluationError:
+      "Impossible de v\u00e9rifier ce message cod\u00e9 pour le moment.",
+    alphabetCompletionEyebrow: "Alphabet secret termin\u00e9",
+    alphabetCompletionTitle: "Message d\u00e9chiffr\u00e9 !",
+    alphabetStatTime: "Temps",
+    alphabetStatChecks: "Nombre de CHECK",
+    alphabetStatSolves: "Nombre de SOLVE",
     sudokuSelectCell:
       "Touchez une case vide, puis choisissez un chiffre pour remplir la grille.",
     sudokuSelectedCell:

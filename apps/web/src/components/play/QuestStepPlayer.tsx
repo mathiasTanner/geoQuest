@@ -13,13 +13,16 @@ import {
 } from "@/lib/offline/questDrafts";
 import {
   cloneSudokuGrid,
+  getAlphabetSymbolsInOrder,
   isSudokuGridComplete,
   parsePublicPuzzleData,
   parsePuzzleSubmission,
+  type AlphabetSubmission,
   type ParsedPublicPuzzle,
   type PuzzleSubmission,
   type SudokuSubmission,
 } from "@/lib/quests/puzzleTypes";
+import AlphabetPuzzle from "@/components/play/AlphabetPuzzle";
 import HangmanPuzzle from "@/components/play/HangmanPuzzle";
 import SudokuPuzzle from "@/components/play/SudokuPuzzle";
 import TextPuzzle from "@/components/play/TextPuzzle";
@@ -57,7 +60,7 @@ type SubmissionResult = {
   };
 };
 
-type SudokuCompletionStats = {
+type PuzzleCompletionStats = {
   durationMs: number;
   checkCount: number;
   solveCount: number;
@@ -79,6 +82,11 @@ function buildDefaultSubmission(parsedPuzzle: ParsedPublicPuzzle): PuzzleSubmiss
       return {
         type: "sudoku",
         grid: cloneSudokuGrid(parsedPuzzle.data.initialGrid),
+      };
+    case "alphabet":
+      return {
+        type: "alphabet",
+        assignments: {},
       };
   }
 }
@@ -104,6 +112,10 @@ function draftToSubmission(
       case "sudoku":
         return parsePuzzleSubmission(parsedPuzzle.type, {
           grid: draft.grid,
+        });
+      case "alphabet":
+        return parsePuzzleSubmission(parsedPuzzle.type, {
+          assignments: draft.assignments,
         });
     }
   } catch {
@@ -135,6 +147,11 @@ function shouldPersistDraft(
                 sudokuDraftMeta.solveCount)
           ))
       );
+    case "alphabet":
+      return (
+        submission.type === "alphabet" &&
+        Object.keys(submission.assignments).length > 0
+      );
   }
 }
 
@@ -146,6 +163,12 @@ function defaultReadyState(parsedPuzzle: ParsedPublicPuzzle, submission: PuzzleS
       return false;
     case "sudoku":
       return submission.type === "sudoku" && isSudokuGridComplete(submission.grid);
+    case "alphabet":
+      return (
+        submission.type === "alphabet" &&
+        Object.keys(submission.assignments).length ===
+          getAlphabetSymbolsInOrder(parsedPuzzle.data.lines).length
+      );
   }
 }
 
@@ -171,7 +194,7 @@ export default function QuestStepPlayer({
   );
   const [successState, setSuccessState] = useState<{
     questCompleted: boolean;
-    sudokuStats?: SudokuCompletionStats;
+    sudokuStats?: PuzzleCompletionStats;
   } | null>(null);
 
   const parsedPuzzleResult = useMemo(() => {
@@ -277,7 +300,7 @@ export default function QuestStepPlayer({
   async function handleSubmit(options?: {
     submissionOverride?: PuzzleSubmission;
     skipSuccessState?: boolean;
-    sudokuStats?: SudokuCompletionStats;
+    sudokuStats?: PuzzleCompletionStats;
   }) {
     const activeSubmission = options?.submissionOverride ?? submission;
 
@@ -332,6 +355,8 @@ export default function QuestStepPlayer({
               ? t.step.hangmanNotSolved
               : parsedPuzzle?.type === "sudoku"
                 ? t.step.sudokuIncorrect
+                : parsedPuzzle?.type === "alphabet"
+                  ? t.step.alphabetIncorrect
                 : t.step.wrongAnswer
           );
         }
@@ -396,10 +421,39 @@ export default function QuestStepPlayer({
 
   async function handleSudokuSolve(
     nextSubmission: SudokuSubmission,
-    stats: SudokuCompletionStats
+    stats: PuzzleCompletionStats
   ) {
     setSubmission(nextSubmission);
     setCanSubmit(isSudokuGridComplete(nextSubmission.grid));
+
+    const result = await handleSubmit({
+      submissionOverride: nextSubmission,
+      skipSuccessState: true,
+      sudokuStats: stats,
+    });
+
+    if (!result?.ok || !result.unlocked) {
+      return null;
+    }
+
+    clearQuestDraft(draftKey.questAccessId, draftKey.stepDocumentId);
+    return {
+      questCompleted: Boolean(result.questCompleted),
+      stats,
+    };
+  }
+
+  async function handleAlphabetSolve(
+    nextSubmission: AlphabetSubmission,
+    stats: PuzzleCompletionStats
+  ) {
+    setSubmission(nextSubmission);
+    setCanSubmit(
+      Object.keys(nextSubmission.assignments).length ===
+        getAlphabetSymbolsInOrder(
+          parsedPuzzle?.type === "alphabet" ? parsedPuzzle.data.lines : []
+        ).length
+    );
 
     const result = await handleSubmit({
       submissionOverride: nextSubmission,
@@ -490,6 +544,31 @@ export default function QuestStepPlayer({
             onContinueAfterComplete={handleContinueAfterSudoku}
           />
         );
+      case "alphabet":
+        if (submission.type !== "alphabet") {
+          return null;
+        }
+
+        return (
+          <AlphabetPuzzle
+            questAccessId={questAccessId}
+            stepDocumentId={step.documentId}
+            publicData={parsedPuzzle.data}
+            value={submission}
+            onChange={(next) => {
+              setSubmission(next);
+              setCanSubmit(
+                Object.keys(next.assignments).length ===
+                  getAlphabetSymbolsInOrder(parsedPuzzle.data.lines).length
+              );
+            }}
+            onReadyChange={setCanSubmit}
+            title={step.title || `${t.step.titlePrefix} ${step.order}`}
+            successText={successText}
+            onRequestSolve={handleAlphabetSolve}
+            onContinueAfterComplete={handleContinueAfterSudoku}
+          />
+        );
     }
   }
 
@@ -504,7 +583,9 @@ export default function QuestStepPlayer({
         </div>
       ) : null}
 
-      {successState && parsedPuzzle?.type !== "sudoku" ? (
+      {successState &&
+      parsedPuzzle?.type !== "sudoku" &&
+      parsedPuzzle?.type !== "alphabet" ? (
         <div className="absolute inset-0 z-20 flex items-center justify-center rounded-lg bg-background/90 p-4 backdrop-blur-sm">
           <div className="w-full max-w-xl space-y-4 rounded-xl border border-border bg-card p-6 shadow-lg">
             <div className="space-y-2">
@@ -579,7 +660,7 @@ export default function QuestStepPlayer({
 
       {renderPuzzle()}
 
-      {parsedPuzzle?.type !== "sudoku" ? (
+      {parsedPuzzle?.type !== "sudoku" && parsedPuzzle?.type !== "alphabet" ? (
         <div className="flex flex-wrap gap-3">
             <button
               type="button"

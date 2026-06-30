@@ -955,7 +955,9 @@ export interface ApiQuestStepQuestStep extends Struct.CollectionTypeSchema {
     publishedAt: Schema.Attribute.DateTime;
     puzzleDataPrivate: Schema.Attribute.JSON & Schema.Attribute.Required;
     puzzleDataPublic: Schema.Attribute.JSON & Schema.Attribute.Required;
-    puzzleType: Schema.Attribute.Enumeration<['text', 'sudoku', 'hangman']> &
+    puzzleType: Schema.Attribute.Enumeration<
+      ['text', 'sudoku', 'hangman', 'alphabet']
+    > &
       Schema.Attribute.Required;
     quest: Schema.Attribute.Relation<'manyToOne', 'api::quest.quest'>;
     radiusMeters: Schema.Attribute.Integer &
