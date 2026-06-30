@@ -50,7 +50,8 @@
       "enum": [
         "text",
         "sudoku",
-        "hangman"
+        "hangman",
+        "alphabet"
       ]
     },
     "puzzleDataPublic": {

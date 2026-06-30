@@ -115,6 +115,7 @@ export default function SudokuPuzzle({
   const [busyAction, setBusyAction] = useState<"check" | "solve" | null>(null);
   const [completionState, setCompletionState] = useState<CompletionState | null>(null);
   const [celebrate, setCelebrate] = useState(false);
+  const [stickyDockHeight, setStickyDockHeight] = useState(0);
   const initialGridKey = useMemo(
     () => JSON.stringify(publicData.initialGrid),
     [publicData.initialGrid]
@@ -124,6 +125,7 @@ export default function SudokuPuzzle({
     [initialGridKey, questAccessId, stepDocumentId]
   );
   const flashTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const stickyDockRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     onReadyChange(isSudokuGridComplete(value.grid));
@@ -173,6 +175,39 @@ export default function SudokuPuzzle({
       if (flashTimeoutRef.current) {
         clearTimeout(flashTimeoutRef.current);
       }
+    };
+  }, []);
+
+  useEffect(() => {
+    const element = stickyDockRef.current;
+
+    if (!element) {
+      return;
+    }
+
+    const updateDockHeight = () => {
+      setStickyDockHeight(element.getBoundingClientRect().height);
+    };
+
+    updateDockHeight();
+
+    if (typeof ResizeObserver === "undefined") {
+      window.addEventListener("resize", updateDockHeight);
+      return () => {
+        window.removeEventListener("resize", updateDockHeight);
+      };
+    }
+
+    const observer = new ResizeObserver(() => {
+      updateDockHeight();
+    });
+
+    observer.observe(element);
+    window.addEventListener("resize", updateDockHeight);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", updateDockHeight);
     };
   }, []);
 
@@ -369,7 +404,7 @@ export default function SudokuPuzzle({
     return (
       <div
         className={[
-          "grid grid-cols-9 gap-1 rounded-xl border border-border bg-background p-2 transition-all duration-500",
+          "grid grid-cols-9 gap-0.5 rounded-xl border border-border bg-background p-1.5 transition-all duration-500 sm:gap-1 sm:p-2",
           completionState
             ? celebrate
               ? "sudoku-grid-finish sudoku-grid-celebrate"
@@ -407,7 +442,7 @@ export default function SudokuPuzzle({
                   setSelectedCell({ row: rowIndex, column: columnIndex })
                 }
                 className={[
-                  "aspect-square min-h-9 rounded-sm text-center text-base font-semibold transition",
+                  "aspect-square w-full rounded-[0.45rem] text-center text-[0.95rem] font-semibold leading-none transition sm:rounded-sm sm:text-base",
                   borderClasses,
                   completionState
                     ? "cursor-default border-primary/20 bg-primary/[0.08] text-foreground"
@@ -572,7 +607,12 @@ export default function SudokuPuzzle({
   }
 
   return (
-    <div className="space-y-5 pb-72 sm:pb-80">
+    <div
+      className="space-y-5"
+      style={{
+        paddingBottom: `calc(${Math.max(stickyDockHeight, 0)}px + env(safe-area-inset-bottom, 0px) + 1rem)`,
+      }}
+    >
       <div className="space-y-3">
         <div className="relative">
           <div
@@ -627,6 +667,7 @@ export default function SudokuPuzzle({
       {puzzleError ? <p className="text-sm text-destructive">{puzzleError}</p> : null}
 
       <div
+        ref={stickyDockRef}
         className="sticky bottom-3 z-20 rounded-2xl border border-border bg-card/95 p-3 shadow-2xl backdrop-blur supports-[backdrop-filter]:bg-card/85"
         style={{
           paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 0.75rem)",

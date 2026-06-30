@@ -9,13 +9,16 @@ import {
 import { getDictionary } from "@/lib/i18n";
 import {
   buildHangmanPreview,
+  evaluateAlphabetAssignments,
   evaluateSudokuGrid,
   parsePrivatePuzzleData,
   parsePublicPuzzleData,
   parsePuzzleSubmission,
+  validateAlphabetSubmission,
   validateHangmanSubmission,
   validateSudokuSubmission,
   validateTextSubmission,
+  type AlphabetEvaluation,
   type HangmanPreview,
   type PuzzleSubmission,
   type SudokuEvaluation,
@@ -1181,6 +1184,12 @@ function validateSubmission(
       }
 
       return validateSudokuSubmission(privatePuzzle.data, submission);
+    case "alphabet":
+      if (privatePuzzle.type !== "alphabet") {
+        return false;
+      }
+
+      return validateAlphabetSubmission(privatePuzzle.data, submission);
   }
 }
 
@@ -1508,4 +1517,50 @@ export async function evaluateSudokuForOwnedQuest(
   }
 
   return evaluateSudokuGrid(privatePuzzle.data.solutionGrid, grid);
+}
+
+export async function evaluateAlphabetForOwnedQuest(
+  session: StrapiEntity<PlayerSessionData>,
+  questAccessId: string,
+  stepDocumentId: string,
+  assignments: Record<string, string>
+): Promise<AlphabetEvaluation> {
+  const summary = await getOwnedQuestSummaryForSession(session, questAccessId);
+
+  if (!summary) {
+    throw new Error("Quest access not found");
+  }
+
+  if (summary.currentStepDocumentId !== stepDocumentId) {
+    throw new Error("This step is not the current step for the quest.");
+  }
+
+  const step = await fetchQuestStepByDocumentId(stepDocumentId, true);
+
+  if (!step) {
+    throw new Error("Quest step not found");
+  }
+
+  const stepData = unwrapStrapiEntity<QuestStepData>(step);
+
+  if (!stepData) {
+    throw new Error("Quest step is missing data");
+  }
+
+  if (stepData.puzzleType !== "alphabet") {
+    throw new Error(
+      `Unsupported puzzleType for validation yet: ${stepData.puzzleType}`
+    );
+  }
+
+  const privatePuzzle = parsePrivatePuzzleData(
+    stepData.puzzleType,
+    stepData.puzzleDataPrivate ?? {}
+  );
+
+  if (privatePuzzle.type !== "alphabet") {
+    throw new Error("Alphabet puzzle data is invalid.");
+  }
+
+  return evaluateAlphabetAssignments(privatePuzzle.data.solutionMap, assignments);
 }
