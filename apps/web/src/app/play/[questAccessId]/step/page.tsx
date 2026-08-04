@@ -45,6 +45,9 @@ export default async function QuestStepPage({ params }: QuestStepPageProps) {
         warningMessage={currentStep.summary.warningMessage}
         restartCurrentStep={currentStep.summary.restartCurrentStep}
         version={currentStep.summary.version}
+        assistance={currentStep.assistance}
+        assistanceConfig={currentStep.assistanceConfig}
+        totalPenaltySeconds={currentStep.summary.totalPenaltySeconds}
         step={currentStep.step}
       />
     </Container>

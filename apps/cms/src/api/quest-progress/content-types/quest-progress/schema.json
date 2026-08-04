@@ -49,6 +49,25 @@
       "type": "datetime",
       "required": true
     },
+    "assistanceState": {
+      "type": "json",
+      "required": true
+    },
+    "totalPenaltySeconds": {
+      "type": "integer",
+      "required": true,
+      "default": 0
+    },
+    "hintPenaltySecondsTotal": {
+      "type": "integer",
+      "required": true,
+      "default": 0
+    },
+    "revealPenaltySecondsTotal": {
+      "type": "integer",
+      "required": true,
+      "default": 0
+    },
     "version": {
       "type": "integer",
       "required": true,

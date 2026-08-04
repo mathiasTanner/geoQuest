@@ -24,6 +24,7 @@ type SudokuPuzzleProps = {
   initialMeta?: SudokuDraftMeta | null;
   title: string;
   successText?: string;
+  revealedCellKeys?: string[];
   onDraftMetaChange: (next: SudokuDraftMeta | null) => void;
   onRequestSolve: (
     nextSubmission: SudokuSubmission,
@@ -96,6 +97,7 @@ export default function SudokuPuzzle({
   initialMeta,
   title,
   successText,
+  revealedCellKeys,
   onDraftMetaChange,
   onRequestSolve,
   onContinueAfterComplete,
@@ -221,6 +223,10 @@ export default function SudokuPuzzle({
   const displayedErrorKeys = useMemo(
     () => new Set(errorCellKeys),
     [errorCellKeys]
+  );
+  const revealedCellKeySet = useMemo(
+    () => new Set(revealedCellKeys ?? []),
+    [revealedCellKeys]
   );
   const confettiPieces = useMemo(
     () =>
@@ -426,6 +432,7 @@ export default function SudokuPuzzle({
             const cellKey = getCellKey(rowIndex, columnIndex);
             const hasError = displayedErrorKeys.has(cellKey);
             const hasConflict = conflictKeys.has(cellKey);
+            const isRevealed = revealedCellKeySet.has(cellKey);
             const borderClasses = [
               rowIndex % 3 === 0 ? "border-t-2" : "border-t",
               columnIndex % 3 === 0 ? "border-l-2" : "border-l",
@@ -449,6 +456,9 @@ export default function SudokuPuzzle({
                     : isSelected
                       ? "border-primary bg-primary/10 text-primary"
                       : "border-border bg-card text-foreground",
+                  isRevealed && !isSelected && !completionState
+                    ? "border-amber-300/80 bg-amber-300/90 text-slate-950 shadow-[0_0_0_1px_rgba(252,211,77,0.16)]"
+                    : "",
                   isClue ? "font-extrabold" : "font-medium",
                   hasError ? "sudoku-cell-error border-destructive bg-destructive/10 text-destructive" : "",
                   hasConflict && !hasError ? "sudoku-cell-conflict" : "",

@@ -23,13 +23,9 @@ type QuestSummary = NonNullable<
 >;
 
 function formatQuestDuration(
-  startedAt: string,
-  endedAt: string,
+  durationMs: number,
   lessThanMinuteLabel: string
 ) {
-  const durationMs =
-    new Date(endedAt).getTime() - new Date(startedAt).getTime();
-
   if (!Number.isFinite(durationMs) || durationMs < 60_000) {
     return lessThanMinuteLabel;
   }
@@ -123,13 +119,23 @@ export default async function QuestPlayPage({
     resolvedSearchParams.completed === "1";
   const primaryAction = getPrimaryAction(t, summary, isCompleted);
   const progressCopy = getProgressCopy(t, summary, isCompleted);
+  const actualDurationMs =
+    new Date(summary.lastCheckpointAt).getTime() -
+    new Date(summary.firstRedeemedAt).getTime();
+  const penaltyDurationMs = Math.max(summary.totalPenaltySeconds, 0) * 1000;
   const totalDuration = isCompleted
     ? formatQuestDuration(
-        summary.firstRedeemedAt,
-        summary.lastCheckpointAt,
+        actualDurationMs + penaltyDurationMs,
         t.play.durationLessThanMinute
       )
     : null;
+  const actualDuration = isCompleted
+    ? formatQuestDuration(actualDurationMs, t.play.durationLessThanMinute)
+    : null;
+  const penaltyDuration =
+    isCompleted && summary.totalPenaltySeconds > 0
+      ? formatQuestDuration(penaltyDurationMs, t.play.durationLessThanMinute)
+      : null;
 
   return (
     <Container className="space-y-8 py-8">
@@ -170,6 +176,8 @@ export default async function QuestPlayPage({
         progressBody={progressCopy?.body ?? t.play.resumeBody}
         warningMessage={summary.warningMessage}
         totalDuration={totalDuration}
+        actualDuration={actualDuration}
+        penaltyDuration={penaltyDuration}
         primaryHref={primaryAction.href}
         primaryLabel={primaryAction.label}
       />

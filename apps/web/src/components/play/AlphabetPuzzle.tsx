@@ -19,6 +19,7 @@ type AlphabetPuzzleProps = {
   onReadyChange: (ready: boolean) => void;
   title: string;
   successText?: string;
+  revealedSymbols?: string[];
   onRequestSolve: (
     nextSubmission: AlphabetSubmission,
     stats: { durationMs: number; checkCount: number; solveCount: number }
@@ -94,6 +95,7 @@ export default function AlphabetPuzzle({
   onReadyChange,
   title,
   successText,
+  revealedSymbols,
   onRequestSolve,
   onContinueAfterComplete,
 }: AlphabetPuzzleProps) {
@@ -145,6 +147,10 @@ export default function AlphabetPuzzle({
         return accumulator;
       }, {}),
     [value.assignments]
+  );
+  const revealedSymbolSet = useMemo(
+    () => new Set(revealedSymbols ?? []),
+    [revealedSymbols]
   );
 
   useEffect(() => {
@@ -580,6 +586,7 @@ export default function AlphabetPuzzle({
                 const letter = value.assignments[symbol] ?? "";
                 const isFocused = focusedSymbol === symbol;
                 const hasError = wrongSymbols.includes(symbol);
+                const isRevealed = revealedSymbolSet.has(symbol);
 
                 return (
                   <button
@@ -591,13 +598,23 @@ export default function AlphabetPuzzle({
                       isFocused
                         ? "border-primary bg-primary/10 ring-2 ring-primary/20"
                         : "border-border bg-background/80 hover:border-primary/50",
+                      isRevealed && !isFocused
+                        ? "border-amber-300/70 bg-amber-200/80 shadow-[0_0_0_1px_rgba(252,211,77,0.14)]"
+                        : "",
                       hasError ? "alphabet-symbol-error border-destructive bg-destructive/10 text-destructive" : "",
                     ].join(" ")}
                   >
                     <span className="text-base font-semibold leading-none text-card-foreground">
                       {symbol}
                     </span>
-                    <span className="mt-3 flex h-8 w-full items-center justify-center rounded-xl border border-dashed border-border/80 bg-background/90 text-lg font-semibold uppercase tracking-[0.16em] text-foreground">
+                    <span
+                      className={[
+                        "mt-3 flex h-8 w-full items-center justify-center rounded-xl border border-dashed border-border/80 bg-background/90 text-lg font-semibold uppercase tracking-[0.16em] text-foreground",
+                        isRevealed
+                            ? "border-amber-300/80 bg-amber-300/90 text-slate-950 shadow-[0_0_0_1px_rgba(252,211,77,0.16)]"
+                            : "",
+                      ].join(" ")}
+                    >
                       {letter || "\u00a0"}
                     </span>
                   </button>

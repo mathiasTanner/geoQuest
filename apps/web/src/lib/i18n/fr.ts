@@ -77,6 +77,9 @@ export const fr = {
     completedBody:
       "Vous avez men\u00e9 cette aventure jusqu'au bout. Votre progression reste accessible sur cet appareil tant que vous ne retirez pas la qu\u00eate.",
     completedDurationLabel: "Temps total",
+    completedActualDurationLabel: "Temps de jeu",
+    completedPenaltyLabel: "P\u00e9nalit\u00e9s d'aide",
+    completedOfficialDurationLabel: "Temps officiel",
     completedPrimaryCta: "Explorer d'autres qu\u00eates",
     shareCta: "Partager mon r\u00e9sultat",
     shareSuccess: "Le lien de la qu\u00eate a \u00e9t\u00e9 copi\u00e9.",
@@ -156,6 +159,100 @@ export const fr = {
     alphabetStatTime: "Temps",
     alphabetStatChecks: "Nombre de CHECK",
     alphabetStatSolves: "Nombre de SOLVE",
+    crosswordIncorrect: "La grille de mots crois\u00e9s n'est pas encore correcte.",
+    crosswordEvaluationError:
+      "Impossible de v\u00e9rifier cette grille de mots crois\u00e9s pour le moment.",
+    crosswordHintsDisabled:
+      "Les indices ne sont pas disponibles pour cette grille de mots crois\u00e9s.",
+    crosswordNoHintsRemaining:
+      "Vous avez d\u00e9j\u00e0 utilis\u00e9 tous les indices disponibles pour cette grille.",
+    crosswordHintUnavailable:
+      "Aucun indice suppl\u00e9mentaire n'est disponible pour cette grille.",
+    crosswordCheckButton: "CHECK",
+    crosswordSolveButton: "SOLVE",
+    crosswordChecking: "V\u00e9rification en cours...",
+    crosswordSolving: "R\u00e9solution en cours...",
+    crosswordCheckSuccess:
+      "Aucune erreur n'a \u00e9t\u00e9 d\u00e9tect\u00e9e pour l'instant dans cette grille.",
+    crosswordCheckErrors:
+      "Certaines lettres sont incorrectes. Les cases concern\u00e9es sont surlign\u00e9es.",
+    crosswordSolveIncomplete:
+      "Compl\u00e9tez encore les d\u00e9finitions manquantes avant de pouvoir r\u00e9soudre cette grille.",
+    crosswordSolveErrors:
+      "La grille contient encore des erreurs. Corrigez les cases surlign\u00e9es puis r\u00e9essayez.",
+    crosswordHintFocus: "Indice : concentrez-vous sur {clue}.",
+    crosswordHintFirstLetter:
+      "Indice : la premi\u00e8re lettre de {clue} a \u00e9t\u00e9 r\u00e9v\u00e9l\u00e9e.",
+    crosswordHintAnswer:
+      "Indice : toute la r\u00e9ponse de {clue} a \u00e9t\u00e9 r\u00e9v\u00e9l\u00e9e.",
+    crosswordDirectionAcross: "horizontal",
+    crosswordDirectionDown: "vertical",
+    crosswordCompletionEyebrow: "Mots crois\u00e9s termin\u00e9s",
+    crosswordCompletionTitle: "Grille compl\u00e9t\u00e9e !",
+    crosswordStatTime: "Temps",
+    crosswordStatHints: "Indices utilis\u00e9s",
+    crosswordStatClues: "D\u00e9finitions remplies",
+    crosswordProgressLabel: "{filled} / {total}",
+    crosswordHintsRemaining: "{count} indice(s) restant(s)",
+    crosswordHelpTitle: "Comment jouer",
+    crosswordHelpDefaultBody:
+      "Touchez une d\u00e9finition ou une case pour s\u00e9lectionner un mot.\n\nTapez ensuite les lettres au clavier pour remplir la grille. Les lettres se placent automatiquement dans le mot actif.\n\nUtilisez CHECK pour rep\u00e9rer les erreurs, INDICE si vous bloquez, et SOLVE quand vous pensez avoir termin\u00e9.",
+    crosswordHelpClose: "Fermer",
+    crosswordHelpButton: "Aide",
+    crosswordHintButton: "Indice",
+    crosswordTypeToFill:
+      "Touchez ici puis utilisez le clavier pour remplir ce mot.",
+    crosswordTypeButton: "\u00c9crire",
+    crosswordAcrossTitle: "Horizontales",
+    crosswordDownTitle: "Verticales",
+    crosswordResetButton: "Recommencer la grille",
+    wordsearchSelectInstruction:
+      "Glissez entre la premi\u00e8re et la derni\u00e8re lettre d'un mot, ou touchez deux cases pour le s\u00e9lectionner.",
+    wordsearchSelectEnd:
+      "Premi\u00e8re lettre s\u00e9lectionn\u00e9e. Touchez maintenant la derni\u00e8re lettre du mot.",
+    wordsearchHelpButton: "Aide",
+    wordsearchHelpTitle: "Comment jouer",
+    wordsearchHelpClose: "Fermer",
+    wordsearchHelpDefaultBody:
+      "Rep\u00e9rez les mots cach\u00e9s dans la grille.\n\n1. Faites glisser votre doigt entre la premi\u00e8re et la derni\u00e8re lettre d'un mot.\n2. Vous pouvez aussi toucher une case, puis une seconde case pour valider une s\u00e9lection en ligne droite.\n3. Les mots trouv\u00e9s restent surlign\u00e9s.\n4. Utilisez un indice si vous bloquez.\n\nQuand tous les mots sont trouv\u00e9s, validez l'\u00e9tape sur place.",
+    wordsearchHintButton: "Indice",
+    wordsearchResetButton: "Recommencer",
+    wordsearchValidateButton: "Valider l'\u00e9tape",
+    wordsearchRetryValidation: "R\u00e9essayer la validation",
+    wordsearchValidating: "Validation en cours...",
+    wordsearchHintsDisabled: "Les indices ne sont pas disponibles pour cette grille.",
+    wordsearchNoHintsRemaining:
+      "Vous avez d\u00e9j\u00e0 utilis\u00e9 tous les indices disponibles.",
+    wordsearchHintUnavailable:
+      "Aucun indice suppl\u00e9mentaire n'est disponible.",
+    wordsearchHintStart:
+      "Indice : le mot \u00ab {word} \u00bb commence sur la case surlign\u00e9e.",
+    wordsearchHintDirection:
+      "Indice : le mot \u00ab {word} \u00bb part vers {direction}.",
+    wordsearchHintReveal:
+      "Indice : le mot \u00ab {word} \u00bb est maintenant enti\u00e8rement surlign\u00e9.",
+    wordsearchDirectionUp: "le haut",
+    wordsearchDirectionDown: "le bas",
+    wordsearchDirectionLeft: "la gauche",
+    wordsearchDirectionRight: "la droite",
+    wordsearchDirectionUpLeft: "le haut-gauche",
+    wordsearchDirectionUpRight: "le haut-droite",
+    wordsearchDirectionDownLeft: "le bas-gauche",
+    wordsearchDirectionDownRight: "le bas-droite",
+    wordsearchInvalidSelection:
+      "Aucun mot cach\u00e9 ne correspond \u00e0 cette s\u00e9lection.",
+    wordsearchAlreadyFound: "Ce mot a d\u00e9j\u00e0 \u00e9t\u00e9 trouv\u00e9.",
+    wordsearchFound: "Mot trouv\u00e9 : {word}",
+    wordsearchProgressLabel: "{found} / {total} mots trouv\u00e9s",
+    wordsearchHintsRemaining: "{count} indice(s) restant(s)",
+    wordsearchClueLabel: "Indice",
+    wordsearchReadyToValidate:
+      "Tous les mots sont trouv\u00e9s. Validez cette \u00e9tape sur place.",
+    wordsearchCompletionEyebrow: "Mots cach\u00e9s termin\u00e9s",
+    wordsearchCompletionTitle: "Grille compl\u00e9t\u00e9e !",
+    wordsearchStatTime: "Temps",
+    wordsearchStatHints: "Indices utilis\u00e9s",
+    wordsearchStatWords: "Mots trouv\u00e9s",
     sudokuSelectCell:
       "Touchez une case vide, puis choisissez un chiffre pour remplir la grille.",
     sudokuSelectedCell:
@@ -183,6 +280,40 @@ export const fr = {
     sudokuStatTime: "Temps",
     sudokuStatChecks: "Nombre de CHECK",
     sudokuStatSolves: "Nombre de SOLVE",
+    assistTitle: "Aides de l'\u00e9tape",
+    assistHintProgress: "Indices utilis\u00e9s : {used} / {total}",
+    assistStepPenaltyLabel: "P\u00e9nalit\u00e9 de cette \u00e9tape",
+    assistQuestPenaltyLabel: "P\u00e9nalit\u00e9 de la qu\u00eate",
+    assistHintButton: "Voir un indice",
+    assistRevealButton: "R\u00e9v\u00e9ler la solution",
+    assistHintLoading: "Indice en cours...",
+    assistRevealLoading: "R\u00e9v\u00e9lation en cours...",
+    assistRevealConfirmTitle: "R\u00e9v\u00e9ler toute la solution ?",
+    assistRevealConfirmBody:
+      "La solution compl\u00e8te de cette \u00e9tape sera affich\u00e9e et une p\u00e9nalit\u00e9 de {penalty} sera ajout\u00e9e \u00e0 votre temps total.",
+    assistRevealCancel: "Annuler",
+    assistRevealConfirm: "R\u00e9v\u00e9ler quand m\u00eame",
+    assistRevealApplied: "La solution de cette \u00e9tape a \u00e9t\u00e9 r\u00e9v\u00e9l\u00e9e.",
+    assistRevealAlreadyUsed:
+      "La solution compl\u00e8te a d\u00e9j\u00e0 \u00e9t\u00e9 r\u00e9v\u00e9l\u00e9e pour cette \u00e9tape.",
+    assistNoHintsRemaining:
+      "Tous les indices disponibles ont d\u00e9j\u00e0 \u00e9t\u00e9 utilis\u00e9s pour cette \u00e9tape.",
+    assistGeneric: "Un indice suppl\u00e9mentaire n'est pas disponible pour cette \u00e9tape.",
+    assistTextLength: "La r\u00e9ponse contient {count} lettre(s).",
+    assistTextFirstLetter: "La r\u00e9ponse commence par la lettre \u00ab {letter} \u00bb.",
+    assistTextWordCount: "La r\u00e9ponse contient {count} mot(s).",
+    assistTextSecondLetter: "La deuxi\u00e8me lettre est \u00ab {letter} \u00bb.",
+    assistHangmanCategory: "Le mot appartient \u00e0 la cat\u00e9gorie \u00ab {category} \u00bb.",
+    assistHangmanLength: "Le mot contient {count} lettre(s).",
+    assistHangmanFirstLetter: "Le mot commence par la lettre \u00ab {letter} \u00bb.",
+    assistHangmanLetter: "La lettre \u00ab {letter} \u00bb fait partie du mot.",
+    assistSudokuCell: "La case ligne {row}, colonne {column} a \u00e9t\u00e9 r\u00e9v\u00e9l\u00e9e.",
+    assistAlphabetMapping:
+      "Le symbole \u00ab {symbol} \u00bb correspond \u00e0 la lettre \u00ab {letter} \u00bb.",
+    assistWordsearchStart:
+      "Le mot \u00ab {word} \u00bb commence \u00e0 la ligne {row}, colonne {column}, vers {direction}.",
+    assistCrosswordFirstLetter:
+      "La premi\u00e8re lettre de la d\u00e9finition {number} ({direction}) a \u00e9t\u00e9 r\u00e9v\u00e9l\u00e9e.",
     flavorTextLabel: "Contexte",
     successTitle: "\u00c9tape valid\u00e9e",
     successContinue: "Voir l'\u00e9tape suivante",
