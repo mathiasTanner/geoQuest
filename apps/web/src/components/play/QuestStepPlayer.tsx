@@ -8,8 +8,10 @@ import {
   clearQuestDraft,
   loadQuestDraft,
   saveQuestDraft,
+  type CrosswordDraftMeta,
   type QuestDraft,
   type SudokuDraftMeta,
+  type WordsearchDraftMeta,
 } from "@/lib/offline/questDrafts";
 import {
   cloneSudokuGrid,
@@ -18,14 +20,24 @@ import {
   parsePublicPuzzleData,
   parsePuzzleSubmission,
   type AlphabetSubmission,
+  type CrosswordSubmission,
   type ParsedPublicPuzzle,
   type PuzzleSubmission,
   type SudokuSubmission,
+  type WordsearchSubmission,
 } from "@/lib/quests/puzzleTypes";
 import AlphabetPuzzle from "@/components/play/AlphabetPuzzle";
+import CrosswordPuzzle from "@/components/play/CrosswordPuzzle";
 import HangmanPuzzle from "@/components/play/HangmanPuzzle";
+import StepAssistancePanel from "@/components/play/StepAssistancePanel";
 import SudokuPuzzle from "@/components/play/SudokuPuzzle";
 import TextPuzzle from "@/components/play/TextPuzzle";
+import WordsearchPuzzle from "@/components/play/WordsearchPuzzle";
+import type {
+  StepAssistAction,
+  StepAssistanceConfig,
+  StepAssistanceSnapshot,
+} from "@/lib/quests/stepAssistance";
 
 type QuestStepPlayerProps = {
   questAccessId: string;
@@ -33,6 +45,9 @@ type QuestStepPlayerProps = {
   warningMessage?: string;
   restartCurrentStep: boolean;
   version: number;
+  assistance: StepAssistanceSnapshot;
+  assistanceConfig: StepAssistanceConfig;
+  totalPenaltySeconds: number;
   step: {
     documentId: string;
     order: number;
@@ -50,6 +65,7 @@ type SubmissionResult = {
   unlocked?: boolean;
   questCompleted?: boolean;
   nextStepDocumentId?: string | null;
+  version?: number;
   error?: string;
   checks?: {
     locationOk: boolean;
@@ -60,11 +76,36 @@ type SubmissionResult = {
   };
 };
 
+type AssistResponse = {
+  ok?: boolean;
+  action?: StepAssistAction;
+  version?: number;
+  stepAssistance?: StepAssistanceSnapshot;
+  totalPenaltySeconds?: number;
+  nextSubmission?: PuzzleSubmission;
+  statusMessage?: string;
+  error?: string;
+};
+
 type PuzzleCompletionStats = {
   durationMs: number;
   checkCount: number;
   solveCount: number;
 };
+
+type WordsearchCompletionStats = {
+  durationMs: number;
+  hintCountUsed: number;
+  foundCount: number;
+};
+
+type CrosswordCompletionStats = {
+  durationMs: number;
+  hintCountUsed: number;
+  filledClueCount: number;
+};
+
+type StatusTone = "info" | "hint" | "reveal";
 
 function buildDefaultSubmission(parsedPuzzle: ParsedPublicPuzzle): PuzzleSubmission {
   switch (parsedPuzzle.type) {
@@ -87,6 +128,16 @@ function buildDefaultSubmission(parsedPuzzle: ParsedPublicPuzzle): PuzzleSubmiss
       return {
         type: "alphabet",
         assignments: {},
+      };
+    case "wordsearch":
+      return {
+        type: "wordsearch",
+        foundWordIds: [],
+      };
+    case "crossword":
+      return {
+        type: "crossword",
+        cells: {},
       };
   }
 }
@@ -117,16 +168,46 @@ function draftToSubmission(
         return parsePuzzleSubmission(parsedPuzzle.type, {
           assignments: draft.assignments,
         });
+      case "wordsearch":
+        return parsePuzzleSubmission(parsedPuzzle.type, {
+          foundWordIds: draft.foundWordIds,
+        });
+      case "crossword":
+        return parsePuzzleSubmission(parsedPuzzle.type, {
+          cells: draft.cells,
+        });
     }
   } catch {
     return buildDefaultSubmission(parsedPuzzle);
   }
 }
 
+function getStartingSubmission(
+  parsedPuzzle: ParsedPublicPuzzle,
+  draft: QuestDraft | null,
+  assistance: StepAssistanceSnapshot
+) {
+  if (draft) {
+    return draftToSubmission(parsedPuzzle, draft);
+  }
+
+  if (assistance.assistedSubmission) {
+    try {
+      return parsePuzzleSubmission(parsedPuzzle.type, assistance.assistedSubmission);
+    } catch {
+      return buildDefaultSubmission(parsedPuzzle);
+    }
+  }
+
+  return buildDefaultSubmission(parsedPuzzle);
+}
+
 function shouldPersistDraft(
   parsedPuzzle: ParsedPublicPuzzle,
   submission: PuzzleSubmission,
-  sudokuDraftMeta?: SudokuDraftMeta | null
+  sudokuDraftMeta?: SudokuDraftMeta | null,
+  wordsearchDraftMeta?: WordsearchDraftMeta | null,
+  crosswordDraftMeta?: CrosswordDraftMeta | null
 ) {
   switch (parsedPuzzle.type) {
     case "text":
@@ -152,6 +233,34 @@ function shouldPersistDraft(
         submission.type === "alphabet" &&
         Object.keys(submission.assignments).length > 0
       );
+    case "wordsearch":
+      return (
+        submission.type === "wordsearch" &&
+        (submission.foundWordIds.length > 0 ||
+          Boolean(
+            wordsearchDraftMeta &&
+              (wordsearchDraftMeta.hintCountUsed ||
+                wordsearchDraftMeta.activeHintWordId ||
+                wordsearchDraftMeta.activeHintLevel ||
+                wordsearchDraftMeta.activeHintStartCell ||
+                wordsearchDraftMeta.activeHintDirection ||
+                (wordsearchDraftMeta.activeHintCells?.length ?? 0) > 0 ||
+                Object.keys(wordsearchDraftMeta.foundWordCellsById ?? {}).length > 0)
+          ))
+      );
+    case "crossword":
+      return (
+        submission.type === "crossword" &&
+        (Object.keys(submission.cells).length > 0 ||
+          Boolean(
+            crosswordDraftMeta &&
+              (crosswordDraftMeta.startedAt ||
+                crosswordDraftMeta.hintCountUsed ||
+                crosswordDraftMeta.activeHintClueId ||
+                crosswordDraftMeta.activeHintLevel ||
+                (crosswordDraftMeta.revealedCellKeys?.length ?? 0) > 0)
+          ))
+      );
   }
 }
 
@@ -169,15 +278,25 @@ function defaultReadyState(parsedPuzzle: ParsedPublicPuzzle, submission: PuzzleS
         Object.keys(submission.assignments).length ===
           getAlphabetSymbolsInOrder(parsedPuzzle.data.lines).length
       );
+    case "wordsearch":
+      return (
+        submission.type === "wordsearch" &&
+        submission.foundWordIds.length === parsedPuzzle.data.words.length
+      );
+    case "crossword":
+      return submission.type === "crossword" && Object.keys(submission.cells).length > 0;
   }
 }
 
 export default function QuestStepPlayer({
   questAccessId,
   questTitle,
+  version,
+  assistance,
+  assistanceConfig,
+  totalPenaltySeconds,
   restartCurrentStep,
   step,
-  version,
   warningMessage,
 }: QuestStepPlayerProps) {
   const t = getDictionary();
@@ -186,12 +305,22 @@ export default function QuestStepPlayer({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
+  const [statusTone, setStatusTone] = useState<StatusTone>("info");
   const [submission, setSubmission] = useState<PuzzleSubmission | null>(null);
   const [canSubmit, setCanSubmit] = useState(false);
+  const [currentVersion, setCurrentVersion] = useState(version);
+  const [stepAssistance, setStepAssistance] = useState(assistance);
+  const [questPenaltySeconds, setQuestPenaltySeconds] = useState(totalPenaltySeconds);
+  const [assistBusyAction, setAssistBusyAction] =
+    useState<StepAssistAction | null>(null);
   const [draftPersistenceDisabled, setDraftPersistenceDisabled] = useState(false);
   const [sudokuDraftMeta, setSudokuDraftMeta] = useState<SudokuDraftMeta | null>(
     null
   );
+  const [wordsearchDraftMeta, setWordsearchDraftMeta] =
+    useState<WordsearchDraftMeta | null>(null);
+  const [crosswordDraftMeta, setCrosswordDraftMeta] =
+    useState<CrosswordDraftMeta | null>(null);
   const [successState, setSuccessState] = useState<{
     questCompleted: boolean;
     sudokuStats?: PuzzleCompletionStats;
@@ -228,6 +357,12 @@ export default function QuestStepPlayer({
   );
 
   useEffect(() => {
+    setCurrentVersion(version);
+    setStepAssistance(assistance);
+    setQuestPenaltySeconds(totalPenaltySeconds);
+  }, [assistance, totalPenaltySeconds, version]);
+
+  useEffect(() => {
     if (!parsedPuzzle) {
       setSubmission(null);
       setCanSubmit(false);
@@ -246,7 +381,7 @@ export default function QuestStepPlayer({
           draftKey.stepDocumentId,
           draftKey.stepRevision
         );
-    const nextSubmission = draftToSubmission(parsedPuzzle, draft);
+    const nextSubmission = getStartingSubmission(parsedPuzzle, draft, assistance);
 
     setSubmission(nextSubmission);
     setCanSubmit(defaultReadyState(parsedPuzzle, nextSubmission));
@@ -260,8 +395,34 @@ export default function QuestStepPlayer({
           }
         : null
     );
+    setWordsearchDraftMeta(
+      draft?.type === "wordsearch"
+        ? {
+            startedAt: draft.startedAt,
+            hintCountUsed: draft.hintCountUsed,
+            activeHintWordId: draft.activeHintWordId,
+            activeHintLevel: draft.activeHintLevel,
+            activeHintStartCell: draft.activeHintStartCell,
+            activeHintDirection: draft.activeHintDirection,
+            activeHintCells: draft.activeHintCells,
+            foundWordCellsById: draft.foundWordCellsById,
+          }
+        : null
+    );
+    setCrosswordDraftMeta(
+      draft?.type === "crossword"
+        ? {
+            startedAt: draft.startedAt,
+            hintCountUsed: draft.hintCountUsed,
+            activeHintClueId: draft.activeHintClueId,
+            activeHintLevel: draft.activeHintLevel,
+            revealedCellKeys: draft.revealedCellKeys,
+          }
+        : null
+    );
     setHydrated(true);
   }, [
+    assistance,
     draftKey.questAccessId,
     draftKey.stepDocumentId,
     draftKey.stepRevision,
@@ -274,13 +435,27 @@ export default function QuestStepPlayer({
       return;
     }
 
-    if (shouldPersistDraft(parsedPuzzle, submission)) {
+    if (
+      shouldPersistDraft(
+        parsedPuzzle,
+        submission,
+        sudokuDraftMeta,
+        wordsearchDraftMeta,
+        crosswordDraftMeta
+      )
+    ) {
       saveQuestDraft(
         draftKey.questAccessId,
         draftKey.stepDocumentId,
         draftKey.stepRevision,
         submission,
-        submission.type === "sudoku" ? sudokuDraftMeta ?? undefined : undefined
+        submission.type === "sudoku"
+          ? sudokuDraftMeta ?? undefined
+          : submission.type === "wordsearch"
+            ? wordsearchDraftMeta ?? undefined
+            : submission.type === "crossword"
+              ? crosswordDraftMeta ?? undefined
+            : undefined
       );
       return;
     }
@@ -295,6 +470,8 @@ export default function QuestStepPlayer({
     parsedPuzzle,
     submission,
     sudokuDraftMeta,
+    wordsearchDraftMeta,
+    crosswordDraftMeta,
   ]);
 
   async function handleSubmit(options?: {
@@ -311,6 +488,7 @@ export default function QuestStepPlayer({
     setLoading(true);
     setSuccessState(null);
     setError(null);
+    setStatusTone("info");
     setStatus(t.step.checkingLocation);
 
     try {
@@ -326,7 +504,7 @@ export default function QuestStepPlayer({
           questAccessId,
           stepDocumentId: step.documentId,
           submission: activeSubmission,
-          version,
+          version: currentVersion,
           coords: {
             lat: coords.lat,
             lng: coords.lng,
@@ -342,6 +520,10 @@ export default function QuestStepPlayer({
         throw new Error(data.error ?? t.step.genericError);
       }
 
+      if (Number.isFinite(Number(data.version))) {
+        setCurrentVersion(Number(data.version));
+      }
+
       if (!data.unlocked) {
         const parts: string[] = [];
 
@@ -351,13 +533,17 @@ export default function QuestStepPlayer({
 
         if (!data.checks?.answerOk) {
           parts.push(
-            parsedPuzzle?.type === "hangman"
-              ? t.step.hangmanNotSolved
-              : parsedPuzzle?.type === "sudoku"
-                ? t.step.sudokuIncorrect
-                : parsedPuzzle?.type === "alphabet"
-                  ? t.step.alphabetIncorrect
-                : t.step.wrongAnswer
+                parsedPuzzle?.type === "hangman"
+                  ? t.step.hangmanNotSolved
+                  : parsedPuzzle?.type === "sudoku"
+                    ? t.step.sudokuIncorrect
+                    : parsedPuzzle?.type === "alphabet"
+                      ? t.step.alphabetIncorrect
+                      : parsedPuzzle?.type === "crossword"
+                        ? t.step.crosswordIncorrect
+                      : parsedPuzzle?.type === "wordsearch"
+                        ? t.step.wordsearchReadyToValidate
+                      : t.step.wrongAnswer
           );
         }
 
@@ -395,15 +581,66 @@ export default function QuestStepPlayer({
       return;
     }
 
-    const nextSubmission = buildDefaultSubmission(parsedPuzzle);
+    const nextSubmission = getStartingSubmission(parsedPuzzle, null, stepAssistance);
     clearQuestDraft(draftKey.questAccessId, draftKey.stepDocumentId);
     setDraftPersistenceDisabled(false);
     setSubmission(nextSubmission);
     setCanSubmit(defaultReadyState(parsedPuzzle, nextSubmission));
     setSudokuDraftMeta(null);
+    setWordsearchDraftMeta(null);
+    setCrosswordDraftMeta(null);
     setSuccessState(null);
     setStatus(null);
     setError(null);
+  }
+
+  async function handleAssist(action: StepAssistAction) {
+    if (!submission || !parsedPuzzle) {
+      return;
+    }
+
+    setAssistBusyAction(action);
+    setError(null);
+    setSuccessState(null);
+
+    try {
+      const response = await fetch("/api/steps/assist", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          action,
+          questAccessId,
+          stepDocumentId: step.documentId,
+          submission,
+          version: currentVersion,
+        }),
+      });
+
+      const data = (await response.json()) as AssistResponse;
+
+      if (!response.ok || !data.ok || !data.stepAssistance || !data.nextSubmission) {
+        throw new Error(data.error ?? t.step.genericError);
+      }
+
+      const nextSubmission = parsePuzzleSubmission(parsedPuzzle.type, data.nextSubmission);
+
+      setSubmission(nextSubmission);
+      setCanSubmit(defaultReadyState(parsedPuzzle, nextSubmission));
+      setStepAssistance(data.stepAssistance);
+      setQuestPenaltySeconds(Number(data.totalPenaltySeconds ?? questPenaltySeconds));
+      setCurrentVersion(Number(data.version ?? currentVersion));
+      setDraftPersistenceDisabled(false);
+      setStatusTone(action === "reveal" ? "reveal" : "hint");
+      setStatus(data.statusMessage ?? null);
+    } catch (caughtError) {
+      setError(
+        caughtError instanceof Error ? caughtError.message : t.step.genericError
+      );
+    } finally {
+      setAssistBusyAction(null);
+    }
   }
 
   function handleContinueAfterSuccess() {
@@ -459,6 +696,55 @@ export default function QuestStepPlayer({
       submissionOverride: nextSubmission,
       skipSuccessState: true,
       sudokuStats: stats,
+    });
+
+    if (!result?.ok || !result.unlocked) {
+      return null;
+    }
+
+    clearQuestDraft(draftKey.questAccessId, draftKey.stepDocumentId);
+    return {
+      questCompleted: Boolean(result.questCompleted),
+      stats,
+    };
+  }
+
+  async function handleWordsearchSolve(
+    nextSubmission: WordsearchSubmission,
+    stats: WordsearchCompletionStats
+  ) {
+    setSubmission(nextSubmission);
+    setCanSubmit(
+      parsedPuzzle?.type === "wordsearch" &&
+        nextSubmission.foundWordIds.length === parsedPuzzle.data.words.length
+    );
+
+    const result = await handleSubmit({
+      submissionOverride: nextSubmission,
+      skipSuccessState: true,
+    });
+
+    if (!result?.ok || !result.unlocked) {
+      return null;
+    }
+
+    clearQuestDraft(draftKey.questAccessId, draftKey.stepDocumentId);
+    return {
+      questCompleted: Boolean(result.questCompleted),
+      stats,
+    };
+  }
+
+  async function handleCrosswordSolve(
+    nextSubmission: CrosswordSubmission,
+    stats: CrosswordCompletionStats
+  ) {
+    setSubmission(nextSubmission);
+    setCanSubmit(Object.keys(nextSubmission.cells).length > 0);
+
+    const result = await handleSubmit({
+      submissionOverride: nextSubmission,
+      skipSuccessState: true,
     });
 
     if (!result?.ok || !result.unlocked) {
@@ -542,6 +828,7 @@ export default function QuestStepPlayer({
             onDraftMetaChange={setSudokuDraftMeta}
             onRequestSolve={handleSudokuSolve}
             onContinueAfterComplete={handleContinueAfterSudoku}
+            revealedCellKeys={stepAssistance.uiState?.revealedCellKeys}
           />
         );
       case "alphabet":
@@ -567,6 +854,59 @@ export default function QuestStepPlayer({
             successText={successText}
             onRequestSolve={handleAlphabetSolve}
             onContinueAfterComplete={handleContinueAfterSudoku}
+            revealedSymbols={stepAssistance.uiState?.revealedSymbols}
+          />
+        );
+      case "wordsearch":
+        if (submission.type !== "wordsearch") {
+          return null;
+        }
+
+        return (
+          <WordsearchPuzzle
+            questAccessId={questAccessId}
+            stepDocumentId={step.documentId}
+            publicData={parsedPuzzle.data}
+            value={submission}
+            onChange={(next) => {
+              setSubmission(next);
+              setCanSubmit(next.foundWordIds.length === parsedPuzzle.data.words.length);
+            }}
+            onReadyChange={setCanSubmit}
+            initialMeta={wordsearchDraftMeta}
+            title={step.title || `${t.step.titlePrefix} ${step.order}`}
+            successText={successText}
+            onDraftMetaChange={setWordsearchDraftMeta}
+            onRequestSolve={handleWordsearchSolve}
+            onContinueAfterComplete={handleContinueAfterSudoku}
+            assistance={stepAssistance}
+            assistanceHintLimit={assistanceConfig.maxSmallHints}
+          />
+        );
+      case "crossword":
+        if (submission.type !== "crossword") {
+          return null;
+        }
+
+        return (
+          <CrosswordPuzzle
+            questAccessId={questAccessId}
+            stepDocumentId={step.documentId}
+            publicData={parsedPuzzle.data}
+            value={submission}
+            onChange={(next) => {
+              setSubmission(next);
+              setCanSubmit(Object.keys(next.cells).length > 0);
+            }}
+            onReadyChange={setCanSubmit}
+            initialMeta={crosswordDraftMeta}
+            title={step.title || `${t.step.titlePrefix} ${step.order}`}
+            successText={successText}
+            onDraftMetaChange={setCrosswordDraftMeta}
+            onRequestSolve={handleCrosswordSolve}
+            onContinueAfterComplete={handleContinueAfterSudoku}
+            assistance={stepAssistance}
+            assistanceHintLimit={assistanceConfig.maxSmallHints}
           />
         );
     }
@@ -574,11 +914,15 @@ export default function QuestStepPlayer({
 
   return (
     <section className="relative space-y-6 rounded-lg border border-border bg-card p-6">
-      {loading ? (
+      {loading || assistBusyAction ? (
         <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-background/80 backdrop-blur-sm">
           <div className="flex items-center gap-3 rounded-md border border-border bg-card px-4 py-3 text-sm font-medium shadow-sm">
             <span className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-            {status ?? t.step.validating}
+            {loading
+              ? status ?? t.step.validating
+              : assistBusyAction === "hint"
+                ? t.step.assistHintLoading
+                : t.step.assistRevealLoading}
           </div>
         </div>
       ) : null}
@@ -660,11 +1004,35 @@ export default function QuestStepPlayer({
 
       {renderPuzzle()}
 
-      {parsedPuzzle?.type !== "sudoku" && parsedPuzzle?.type !== "alphabet" ? (
+      <StepAssistancePanel
+        busyAction={assistBusyAction}
+        canHint={
+          !stepAssistance.revealUsed &&
+          stepAssistance.hintUses < assistanceConfig.maxSmallHints
+        }
+        canReveal={!stepAssistance.revealUsed}
+        hintUses={stepAssistance.hintUses}
+        maxSmallHints={assistanceConfig.maxSmallHints}
+        stepPenaltySeconds={stepAssistance.penaltySeconds}
+        totalPenaltySeconds={questPenaltySeconds}
+        hintPenaltySeconds={assistanceConfig.hintPenaltySeconds}
+        revealPenaltySeconds={assistanceConfig.revealPenaltySeconds}
+        onHint={() => {
+          void handleAssist("hint");
+        }}
+        onReveal={() => {
+          void handleAssist("reveal");
+        }}
+      />
+
+      {parsedPuzzle?.type !== "sudoku" &&
+      parsedPuzzle?.type !== "alphabet" &&
+      parsedPuzzle?.type !== "wordsearch" &&
+      parsedPuzzle?.type !== "crossword" ? (
         <div className="flex flex-wrap gap-3">
             <button
               type="button"
-              disabled={loading || !canSubmit}
+              disabled={loading || assistBusyAction !== null || !canSubmit}
               onClick={() => {
                 void handleSubmit();
               }}
@@ -675,7 +1043,7 @@ export default function QuestStepPlayer({
           {parsedPuzzle && submission ? (
             <button
               type="button"
-              disabled={loading}
+              disabled={loading || assistBusyAction !== null}
               onClick={handleResetStep}
               className="inline-flex rounded-md border border-border bg-background px-4 py-2 text-foreground hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-60"
             >
@@ -686,8 +1054,31 @@ export default function QuestStepPlayer({
       ) : null}
 
       {status && !loading ? (
-        <div className="rounded-md border border-border bg-background p-4">
-          <p className="text-sm text-muted-foreground">{status}</p>
+        <div
+          className={[
+            "rounded-2xl border px-4 py-4 shadow-lg",
+            statusTone === "hint"
+              ? "border-amber-300/70 bg-amber-100 text-amber-950 dark:border-amber-200/80 dark:bg-amber-300/90 dark:text-slate-950"
+              : statusTone === "reveal"
+                ? "border-orange-300/70 bg-orange-100 text-orange-950 dark:border-orange-200/80 dark:bg-orange-300/92 dark:text-slate-950"
+                : "border-primary/25 bg-primary/10 text-card-foreground",
+          ].join(" ")}
+        >
+          <div className="flex items-start gap-3">
+            <span
+              className={[
+                "mt-0.5 flex h-8 w-8 flex-none items-center justify-center rounded-full text-sm font-black shadow-sm",
+                statusTone === "hint"
+                  ? "bg-white/80 text-amber-700 dark:bg-amber-50/80 dark:text-amber-700"
+                  : statusTone === "reveal"
+                    ? "bg-white/80 text-orange-700 dark:bg-orange-50/85 dark:text-orange-700"
+                    : "bg-primary/15 text-primary",
+              ].join(" ")}
+            >
+              !
+            </span>
+            <p className="text-sm font-semibold leading-6 text-current">{status}</p>
+          </div>
         </div>
       ) : null}
       {error ? <p className="text-sm text-destructive">{error}</p> : null}

@@ -14,6 +14,8 @@ type QuestPlayPanelsProps = {
   progressBody: string;
   warningMessage?: string;
   totalDuration?: string | null;
+  actualDuration?: string | null;
+  penaltyDuration?: string | null;
   primaryHref: string;
   primaryLabel: string;
 };
@@ -27,6 +29,8 @@ export default function QuestPlayPanels({
   progressBody,
   warningMessage,
   totalDuration,
+  actualDuration,
+  penaltyDuration,
   primaryHref,
   primaryLabel,
 }: QuestPlayPanelsProps) {
@@ -145,10 +149,32 @@ export default function QuestPlayPanels({
                 <p className="text-muted-foreground">{t.play.completedBody}</p>
                 {totalDuration ? (
                   <div className="rounded-md border border-border bg-background p-4">
-                    <p className="text-sm text-muted-foreground">
-                      {t.play.completedDurationLabel}
-                    </p>
-                    <p className="mt-1 text-2xl font-semibold">{totalDuration}</p>
+                    <div className="grid gap-4 sm:grid-cols-3">
+                      {actualDuration ? (
+                        <div>
+                          <p className="text-sm text-muted-foreground">
+                            {t.play.completedActualDurationLabel}
+                          </p>
+                          <p className="mt-1 text-xl font-semibold">{actualDuration}</p>
+                        </div>
+                      ) : null}
+                      {penaltyDuration ? (
+                        <div>
+                          <p className="text-sm text-muted-foreground">
+                            {t.play.completedPenaltyLabel}
+                          </p>
+                          <p className="mt-1 text-xl font-semibold">{penaltyDuration}</p>
+                        </div>
+                      ) : null}
+                      <div>
+                        <p className="text-sm text-muted-foreground">
+                          {penaltyDuration
+                            ? t.play.completedOfficialDurationLabel
+                            : t.play.completedDurationLabel}
+                        </p>
+                        <p className="mt-1 text-2xl font-semibold">{totalDuration}</p>
+                      </div>
+                    </div>
                   </div>
                 ) : null}
               </>

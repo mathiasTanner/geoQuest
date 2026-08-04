@@ -51,7 +51,9 @@
         "text",
         "sudoku",
         "hangman",
-        "alphabet"
+        "alphabet",
+        "wordsearch",
+        "crossword"
       ]
     },
     "puzzleDataPublic": {

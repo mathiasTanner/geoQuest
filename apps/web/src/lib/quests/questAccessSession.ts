@@ -9,20 +9,40 @@ import {
 import { getDictionary } from "@/lib/i18n";
 import {
   buildHangmanPreview,
+  evaluateCrosswordSubmission,
   evaluateAlphabetAssignments,
   evaluateSudokuGrid,
+  evaluateWordsearchSelection,
+  getCrosswordHint,
+  getWordsearchHint,
   parsePrivatePuzzleData,
   parsePublicPuzzleData,
   parsePuzzleSubmission,
   validateAlphabetSubmission,
+  validateCrosswordSubmission,
   validateHangmanSubmission,
   validateSudokuSubmission,
   validateTextSubmission,
   type AlphabetEvaluation,
+  type CrosswordEvaluation,
+  type CrosswordHint,
   type HangmanPreview,
+  type PuzzleType,
   type PuzzleSubmission,
   type SudokuEvaluation,
+  type WordsearchCell,
+  type WordsearchHint,
+  type WordsearchSelectionEvaluation,
+  validateWordsearchSubmission,
 } from "@/lib/quests/puzzleTypes";
+import {
+  applyStepAssistance,
+  getDefaultStepAssistanceSnapshot,
+  parseStoredStepAssistanceSnapshot,
+  readStepAssistanceConfig,
+  type StepAssistAction,
+  type StepAssistanceSnapshot,
+} from "@/lib/quests/stepAssistance";
 
 export const QUEST_SESSION_COOKIE_NAME = "gq_session";
 
@@ -78,6 +98,10 @@ export type QuestProgressData = {
   currentStepStartedAt?: string | null;
   lastActiveAt: string;
   lastCheckpointAt: string;
+  assistanceState?: Record<string, unknown> | null;
+  totalPenaltySeconds?: number | null;
+  hintPenaltySecondsTotal?: number | null;
+  revealPenaltySecondsTotal?: number | null;
   version: number;
 };
 
@@ -143,6 +167,9 @@ export type OwnedQuestSummary = {
   firstRedeemedAt: string;
   lastOpenedAt?: string | null;
   lastCheckpointAt: string;
+  totalPenaltySeconds: number;
+  hintPenaltySecondsTotal: number;
+  revealPenaltySecondsTotal: number;
   playHref: string;
   stepHref: string;
 };
@@ -176,6 +203,18 @@ export type SubmissionAdvanceResult = {
     effectiveRadiusMeters: number;
     accuracyMeters: number;
   };
+};
+
+export type StepAssistMutationResult = {
+  ok: true;
+  action: StepAssistAction;
+  version: number;
+  stepAssistance: StepAssistanceSnapshot;
+  totalPenaltySeconds: number;
+  hintPenaltySecondsTotal: number;
+  revealPenaltySecondsTotal: number;
+  nextSubmission: PuzzleSubmission;
+  statusMessage: string;
 };
 
 const lifecycleStore = globalThis as typeof globalThis & {
@@ -280,6 +319,25 @@ function normalizeCompletedSteps(value: unknown): number[] {
     .map((entry) => Number(entry))
     .filter((entry) => Number.isFinite(entry))
     .sort((a, b) => a - b);
+}
+
+function normalizeAssistanceStateMap(value: unknown) {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
+}
+
+function getStepAssistanceForDocument(
+  progress: QuestProgressData,
+  stepDocumentId: string,
+  puzzleType: string
+) {
+  const assistanceState = normalizeAssistanceStateMap(progress.assistanceState);
+
+  return parseStoredStepAssistanceSnapshot(
+    puzzleType as PuzzleType,
+    assistanceState[stepDocumentId]
+  );
 }
 
 async function strapiRequest(path: string, init?: RequestInit) {
@@ -766,6 +824,10 @@ async function createQuestProgress(
     currentStepStartedAt: createdAt,
     lastActiveAt: createdAt,
     lastCheckpointAt: createdAt,
+    assistanceState: {},
+    totalPenaltySeconds: 0,
+    hintPenaltySecondsTotal: 0,
+    revealPenaltySecondsTotal: 0,
     version: 1,
   });
 
@@ -950,6 +1012,9 @@ export function serializeOwnedQuestSummary(
     firstRedeemedAt: accessData.firstRedeemedAt,
     lastOpenedAt: accessData.lastOpenedAt ?? null,
     lastCheckpointAt: progress.lastCheckpointAt,
+    totalPenaltySeconds: Number(progress.totalPenaltySeconds ?? 0),
+    hintPenaltySecondsTotal: Number(progress.hintPenaltySecondsTotal ?? 0),
+    revealPenaltySecondsTotal: Number(progress.revealPenaltySecondsTotal ?? 0),
     playHref: `/play/${accessId}`,
     stepHref: `/play/${accessId}/step`,
   };
@@ -1190,6 +1255,22 @@ function validateSubmission(
       }
 
       return validateAlphabetSubmission(privatePuzzle.data, submission);
+    case "wordsearch":
+      if (privatePuzzle.type !== "wordsearch") {
+        return false;
+      }
+
+      return validateWordsearchSubmission(privatePuzzle.data, submission);
+    case "crossword":
+      if (publicPuzzle.type !== "crossword" || privatePuzzle.type !== "crossword") {
+        return false;
+      }
+
+      return validateCrosswordSubmission(
+        publicPuzzle.data,
+        privatePuzzle.data,
+        submission
+      );
   }
 }
 
@@ -1370,6 +1451,138 @@ export async function advanceOwnedQuestProgress({
   }
 }
 
+export async function assistOwnedQuestStep({
+  action,
+  questAccessId,
+  stepDocumentId,
+  submission,
+  version,
+}: {
+  action: StepAssistAction;
+  questAccessId: string;
+  stepDocumentId: string;
+  submission: unknown;
+  version: number;
+}): Promise<StepAssistMutationResult> {
+  await maybeRunLifecycleMaintenance();
+
+  const access = await fetchQuestAccessById(questAccessId);
+
+  if (!access) {
+    throw new Error("Quest access not found");
+  }
+
+  const accessData = unwrapStrapiEntity<QuestAccessData>(access);
+  const progressEntity = getRelationEntity<QuestProgressData>(accessData?.progress);
+  const progressData = unwrapRelationEntity<QuestProgressData>(accessData?.progress);
+
+  if (!accessData || !progressEntity || !progressData) {
+    throw new Error("Quest access is missing progress information");
+  }
+
+  const progressId = getEntityIdentifier(progressEntity);
+
+  if (!progressId) {
+    throw new Error("Quest progress is missing an identifier");
+  }
+
+  const progressLock = await acquireQuestProgressLock(progressId);
+
+  try {
+    const lockedAccess = await fetchQuestAccessById(questAccessId);
+    const lockedAccessData = unwrapStrapiEntity<QuestAccessData>(lockedAccess);
+    const lockedProgressData = unwrapRelationEntity<QuestProgressData>(
+      lockedAccessData?.progress
+    );
+
+    if (!lockedAccessData || !lockedProgressData) {
+      throw new Error("Quest access is missing progress information");
+    }
+
+    if (lockedProgressData.version !== version) {
+      throw new Error("Quest progress is stale. Please reload and try again.");
+    }
+
+    if (lockedProgressData.currentStepDocumentId !== stepDocumentId) {
+      throw new Error("This step is not the current step for the quest.");
+    }
+
+    const step = await fetchQuestStepByDocumentId(stepDocumentId, true);
+
+    if (!step) {
+      throw new Error("Quest step not found");
+    }
+
+    const stepData = unwrapStrapiEntity<QuestStepData>(step);
+
+    if (!stepData) {
+      throw new Error("Quest step is missing data");
+    }
+
+    const parsedSubmission = parsePuzzleSubmission(stepData.puzzleType, submission);
+    const publicPuzzle = parsePublicPuzzleData(
+      stepData.puzzleType,
+      stepData.puzzleDataPublic ?? {}
+    );
+    const privatePuzzle = parsePrivatePuzzleData(
+      stepData.puzzleType,
+      stepData.puzzleDataPrivate ?? {}
+    );
+    const currentStepAssistance = getStepAssistanceForDocument(
+      lockedProgressData,
+      stepDocumentId,
+      stepData.puzzleType
+    );
+    const result = applyStepAssistance({
+      action,
+      puzzleType: stepData.puzzleType as PuzzleType,
+      publicPuzzle,
+      privatePuzzle,
+      submission: parsedSubmission,
+      currentState: currentStepAssistance,
+      rawPrivateData: stepData.puzzleDataPrivate ?? {},
+    });
+    const assistanceState = {
+      ...normalizeAssistanceStateMap(lockedProgressData.assistanceState),
+      [stepDocumentId]: result.nextState,
+    };
+    const nextVersion = Number(lockedProgressData.version) + 1;
+    const activityTime = now().toISOString();
+    const totalPenaltySeconds =
+      Number(lockedProgressData.totalPenaltySeconds ?? 0) +
+      result.penaltySecondsApplied;
+    const hintPenaltySecondsTotal =
+      Number(lockedProgressData.hintPenaltySecondsTotal ?? 0) +
+      (action === "hint" ? result.penaltySecondsApplied : 0);
+    const revealPenaltySecondsTotal =
+      Number(lockedProgressData.revealPenaltySecondsTotal ?? 0) +
+      (action === "reveal" ? result.penaltySecondsApplied : 0);
+
+    await strapiUpdate<QuestProgressData>("/quest-progresses", progressId, {
+      assistanceState,
+      totalPenaltySeconds,
+      hintPenaltySecondsTotal,
+      revealPenaltySecondsTotal,
+      lastActiveAt: activityTime,
+      version: nextVersion,
+    });
+
+    return {
+      ok: true,
+      action,
+      version: nextVersion,
+      stepAssistance: result.nextState,
+      totalPenaltySeconds,
+      hintPenaltySecondsTotal,
+      revealPenaltySecondsTotal,
+      nextSubmission: result.nextSubmission,
+      statusMessage: result.statusMessage,
+    };
+  } finally {
+    await releaseQuestProgressLock(progressLock);
+  }
+}
+
 export async function getCurrentStepForOwnedQuest(
   session: StrapiEntity<PlayerSessionData>,
   questAccessId: string
@@ -1398,8 +1611,18 @@ export async function getCurrentStepForOwnedQuest(
     return null;
   }
 
+  const access = await fetchQuestAccessById(questAccessId);
+  const accessData = unwrapStrapiEntity<QuestAccessData>(access);
+  const progressData = unwrapRelationEntity<QuestProgressData>(accessData?.progress);
+  const assistance = progressData
+    ? getStepAssistanceForDocument(progressData, stepDocumentId, stepData.puzzleType)
+    : getDefaultStepAssistanceSnapshot();
+  const assistanceConfig = readStepAssistanceConfig(stepData.puzzleDataPrivate ?? {});
+
   return {
     summary,
+    assistance,
+    assistanceConfig,
     step: {
       documentId: stepDocumentId,
       order: Number(stepData.order),
@@ -1563,4 +1786,238 @@ export async function evaluateAlphabetForOwnedQuest(
   }
 
   return evaluateAlphabetAssignments(privatePuzzle.data.solutionMap, assignments);
+}
+
+export async function evaluateWordsearchSelectionForOwnedQuest(
+  session: StrapiEntity<PlayerSessionData>,
+  questAccessId: string,
+  stepDocumentId: string,
+  foundWordIds: string[],
+  start: WordsearchCell,
+  end: WordsearchCell
+): Promise<WordsearchSelectionEvaluation> {
+  const summary = await getOwnedQuestSummaryForSession(session, questAccessId);
+
+  if (!summary) {
+    throw new Error("Quest access not found");
+  }
+
+  if (summary.currentStepDocumentId !== stepDocumentId) {
+    throw new Error("This step is not the current step for the quest.");
+  }
+
+  const step = await fetchQuestStepByDocumentId(stepDocumentId, true);
+
+  if (!step) {
+    throw new Error("Quest step not found");
+  }
+
+  const stepData = unwrapStrapiEntity<QuestStepData>(step);
+
+  if (!stepData) {
+    throw new Error("Quest step is missing data");
+  }
+
+  if (stepData.puzzleType !== "wordsearch") {
+    throw new Error(
+      `Unsupported puzzleType for validation yet: ${stepData.puzzleType}`
+    );
+  }
+
+  const publicPuzzle = parsePublicPuzzleData(
+    stepData.puzzleType,
+    stepData.puzzleDataPublic ?? {}
+  );
+  const privatePuzzle = parsePrivatePuzzleData(
+    stepData.puzzleType,
+    stepData.puzzleDataPrivate ?? {}
+  );
+
+  if (publicPuzzle.type !== "wordsearch" || privatePuzzle.type !== "wordsearch") {
+    throw new Error("Wordsearch puzzle data is invalid.");
+  }
+
+  return evaluateWordsearchSelection(
+    publicPuzzle.data,
+    privatePuzzle.data,
+    foundWordIds,
+    start,
+    end
+  );
+}
+
+export async function getWordsearchHintForOwnedQuest(
+  session: StrapiEntity<PlayerSessionData>,
+  questAccessId: string,
+  stepDocumentId: string,
+  foundWordIds: string[],
+  hintCountUsed: number,
+  currentHintWordId?: string | null,
+  currentHintLevel?: number | null
+): Promise<WordsearchHint> {
+  const summary = await getOwnedQuestSummaryForSession(session, questAccessId);
+
+  if (!summary) {
+    throw new Error("Quest access not found");
+  }
+
+  if (summary.currentStepDocumentId !== stepDocumentId) {
+    throw new Error("This step is not the current step for the quest.");
+  }
+
+  const step = await fetchQuestStepByDocumentId(stepDocumentId, true);
+
+  if (!step) {
+    throw new Error("Quest step not found");
+  }
+
+  const stepData = unwrapStrapiEntity<QuestStepData>(step);
+
+  if (!stepData) {
+    throw new Error("Quest step is missing data");
+  }
+
+  if (stepData.puzzleType !== "wordsearch") {
+    throw new Error(
+      `Unsupported puzzleType for validation yet: ${stepData.puzzleType}`
+    );
+  }
+
+  const publicPuzzle = parsePublicPuzzleData(
+    stepData.puzzleType,
+    stepData.puzzleDataPublic ?? {}
+  );
+  const privatePuzzle = parsePrivatePuzzleData(
+    stepData.puzzleType,
+    stepData.puzzleDataPrivate ?? {}
+  );
+
+  if (publicPuzzle.type !== "wordsearch" || privatePuzzle.type !== "wordsearch") {
+    throw new Error("Wordsearch puzzle data is invalid.");
+  }
+
+  return getWordsearchHint(
+    publicPuzzle.data,
+    privatePuzzle.data,
+    foundWordIds,
+    hintCountUsed,
+    currentHintWordId,
+    currentHintLevel
+  );
+}
+
+export async function evaluateCrosswordForOwnedQuest(
+  session: StrapiEntity<PlayerSessionData>,
+  questAccessId: string,
+  stepDocumentId: string,
+  cells: Record<string, string>
+): Promise<CrosswordEvaluation> {
+  const summary = await getOwnedQuestSummaryForSession(session, questAccessId);
+
+  if (!summary) {
+    throw new Error("Quest access not found");
+  }
+
+  if (summary.currentStepDocumentId !== stepDocumentId) {
+    throw new Error("This step is not the current step for the quest.");
+  }
+
+  const step = await fetchQuestStepByDocumentId(stepDocumentId, true);
+
+  if (!step) {
+    throw new Error("Quest step not found");
+  }
+
+  const stepData = unwrapStrapiEntity<QuestStepData>(step);
+
+  if (!stepData) {
+    throw new Error("Quest step is missing data");
+  }
+
+  if (stepData.puzzleType !== "crossword") {
+    throw new Error(
+      `Unsupported puzzleType for validation yet: ${stepData.puzzleType}`
+    );
+  }
+
+  const publicPuzzle = parsePublicPuzzleData(
+    stepData.puzzleType,
+    stepData.puzzleDataPublic ?? {}
+  );
+  const privatePuzzle = parsePrivatePuzzleData(
+    stepData.puzzleType,
+    stepData.puzzleDataPrivate ?? {}
+  );
+
+  if (publicPuzzle.type !== "crossword" || privatePuzzle.type !== "crossword") {
+    throw new Error("Crossword puzzle data is invalid.");
+  }
+
+  return evaluateCrosswordSubmission(publicPuzzle.data, privatePuzzle.data, {
+    type: "crossword",
+    cells,
+  });
+}
+
+export async function getCrosswordHintForOwnedQuest(
+  session: StrapiEntity<PlayerSessionData>,
+  questAccessId: string,
+  stepDocumentId: string,
+  cells: Record<string, string>,
+  hintCountUsed: number,
+  currentHintClueId?: string | null,
+  currentHintLevel?: number | null
+): Promise<CrosswordHint> {
+  const summary = await getOwnedQuestSummaryForSession(session, questAccessId);
+
+  if (!summary) {
+    throw new Error("Quest access not found");
+  }
+
+  if (summary.currentStepDocumentId !== stepDocumentId) {
+    throw new Error("This step is not the current step for the quest.");
+  }
+
+  const step = await fetchQuestStepByDocumentId(stepDocumentId, true);
+
+  if (!step) {
+    throw new Error("Quest step not found");
+  }
+
+  const stepData = unwrapStrapiEntity<QuestStepData>(step);
+
+  if (!stepData) {
+    throw new Error("Quest step is missing data");
+  }
+
+  if (stepData.puzzleType !== "crossword") {
+    throw new Error(
+      `Unsupported puzzleType for validation yet: ${stepData.puzzleType}`
+    );
+  }
+
+  const publicPuzzle = parsePublicPuzzleData(
+    stepData.puzzleType,
+    stepData.puzzleDataPublic ?? {}
+  );
+  const privatePuzzle = parsePrivatePuzzleData(
+    stepData.puzzleType,
+    stepData.puzzleDataPrivate ?? {}
+  );
+
+  if (publicPuzzle.type !== "crossword" || privatePuzzle.type !== "crossword") {
+    throw new Error("Crossword puzzle data is invalid.");
+  }
+
+  return getCrosswordHint(
+    publicPuzzle.data,
+    privatePuzzle.data,
+    {
+      type: "crossword",
+      cells,
+    },
+    hintCountUsed,
+    currentHintClueId,
+    currentHintLevel
+  );
 }

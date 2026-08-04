@@ -852,6 +852,7 @@ export interface ApiQuestProgressQuestProgress
     draftAndPublish: false;
   };
   attributes: {
+    assistanceState: Schema.Attribute.JSON & Schema.Attribute.Required;
     completedStepOrders: Schema.Attribute.JSON & Schema.Attribute.Required;
     createdAt: Schema.Attribute.DateTime;
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
@@ -859,6 +860,9 @@ export interface ApiQuestProgressQuestProgress
     currentStepDocumentId: Schema.Attribute.String & Schema.Attribute.Required;
     currentStepOrder: Schema.Attribute.Integer & Schema.Attribute.Required;
     currentStepStartedAt: Schema.Attribute.DateTime;
+    hintPenaltySecondsTotal: Schema.Attribute.Integer &
+      Schema.Attribute.Required &
+      Schema.Attribute.DefaultTo<0>;
     lastActiveAt: Schema.Attribute.DateTime & Schema.Attribute.Required;
     lastCheckpointAt: Schema.Attribute.DateTime & Schema.Attribute.Required;
     locale: Schema.Attribute.String & Schema.Attribute.Private;
@@ -872,9 +876,15 @@ export interface ApiQuestProgressQuestProgress
       'oneToOne',
       'api::quest-access.quest-access'
     >;
+    revealPenaltySecondsTotal: Schema.Attribute.Integer &
+      Schema.Attribute.Required &
+      Schema.Attribute.DefaultTo<0>;
     status: Schema.Attribute.Enumeration<['active', 'completed']> &
       Schema.Attribute.Required &
       Schema.Attribute.DefaultTo<'active'>;
+    totalPenaltySeconds: Schema.Attribute.Integer &
+      Schema.Attribute.Required &
+      Schema.Attribute.DefaultTo<0>;
     updatedAt: Schema.Attribute.DateTime;
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
@@ -956,7 +966,7 @@ export interface ApiQuestStepQuestStep extends Struct.CollectionTypeSchema {
     puzzleDataPrivate: Schema.Attribute.JSON & Schema.Attribute.Required;
     puzzleDataPublic: Schema.Attribute.JSON & Schema.Attribute.Required;
     puzzleType: Schema.Attribute.Enumeration<
-      ['text', 'sudoku', 'hangman', 'alphabet']
+      ['text', 'sudoku', 'hangman', 'alphabet', 'wordsearch', 'crossword']
     > &
       Schema.Attribute.Required;
     quest: Schema.Attribute.Relation<'manyToOne', 'api::quest.quest'>;
